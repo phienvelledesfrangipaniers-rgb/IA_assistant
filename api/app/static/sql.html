@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SQL Winpharma - Assistant IA Pharmacie</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #111827;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      nav {
+        width: 220px;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      nav h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 12px 0;
+        color: #94a3b8;
+      }
+      nav a {
+        color: #e2e8f0;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: block;
+      }
+      nav a.active,
+      nav a:hover {
+        background: #1e293b;
+      }
+      .content {
+        flex: 1;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 20px 28px;
+      }
+      main {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 24px 40px;
+        display: grid;
+        gap: 16px;
+      }
+      section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      }
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        color: #4b5563;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+      button {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      a {
+        color: #93c5fd;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h2>Navigation</h2>
+        <a href="/">Console</a>
+        <a href="/config">Configuration</a>
+        <a class="active" href="/sql">SQL (SELECT)</a>
+      </nav>
+      <div class="content">
+        <header>
+          <h1>SQL Winpharma</h1>
+          <p>Exécutez des requêtes SELECT sur une pharmacie via DataSnap.</p>
+        </header>
+        <main>
+      <section>
+        <label for="sql-pharma">Pharmacie</label>
+        <input id="sql-pharma" placeholder="frang" value="frang" />
+        <label for="sql-query" style="margin-top: 12px">Requête SELECT</label>
+        <textarea
+          id="sql-query"
+          rows="6"
+          placeholder="SELECT * FROM produit LIMIT 50"
+        ></textarea>
+        <button id="sql-run" style="margin-top: 12px">Exécuter</button>
+      </section>
+      <section>
+        <h2>Résultat</h2>
+        <pre id="sql-output">En attente d'une requête.</pre>
+      </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      document.getElementById("sql-run").addEventListener("click", async () => {
+        const pharma = document.getElementById("sql-pharma").value;
+        const sql = document.getElementById("sql-query").value;
+        const output = document.getElementById("sql-output");
+        output.textContent = "Requête en cours...";
+        const response = await fetch("/sql/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pharma_id: pharma, sql }),
+        });
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      });
+    </script>
+  </body>
+</html>
