@@ -8,7 +8,10 @@ Assistant IA pour le pilotage RH, achats, ventes, stock basé sur Winpharma via 
 docker compose up --build
 ```
 
-Les scripts SQL sont appliqués automatiquement au démarrage de Postgres.
+Les scripts SQL sont appliqués automatiquement au démarrage de Postgres (copiés dans l'image DB).
+Si le conteneur `ia_pharma_db` affiche encore `Permission denied` sur `/docker-entrypoint-initdb.d`,
+vérifiez que l'image DB est bien reconstruite (`docker compose build db`) et que le dossier
+`sql/` est lisible par Docker (ex: `chmod -R a+rX sql`).
 
 ## Configuration
 

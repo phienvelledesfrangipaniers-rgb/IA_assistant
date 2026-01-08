@@ -2,7 +2,9 @@ version: "3.9"
 
 services:
   db:
-    image: pgvector/pgvector:pg16
+    build:
+      context: .
+      dockerfile: postgres/Dockerfile
     container_name: ia_pharma_db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-ia}
@@ -12,7 +14,6 @@ services:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
-      - ./sql:/docker-entrypoint-initdb.d
 
   extractor:
     build:
