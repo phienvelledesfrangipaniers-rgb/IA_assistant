@@ -62,6 +62,11 @@ def sql_page() -> FileResponse:
     return FileResponse(static_dir / "sql.html")
 
 
+@app.get("/sql/")
+def sql_page_slash() -> FileResponse:
+    return FileResponse(static_dir / "sql.html")
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"status": "ok", "database": check_connection()}

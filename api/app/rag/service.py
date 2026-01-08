@@ -131,7 +131,22 @@ def answer_question(
     sources = search_documents(pharma_id, question, settings)
     kpi_summary = build_kpi_summary(pharma_id, start, end)
     prompt = f"Question: {question}\nKPI: {kpi_summary}\nSources: {sources}"
-    answer = settings.llm_provider.generate(prompt)
+    if isinstance(settings.llm_provider, NoLLMProvider):
+        snippets = [
+            source["content"][:300].replace("\n", " ").strip()
+            for source in sources
+            if source.get("content")
+        ]
+        snippet_text = "\n".join(f"- {snippet}" for snippet in snippets[:3]) or "- Aucun extrait trouvé."
+        answer = (
+            "Réponse basée sur les documents indexés et les KPI disponibles.\n"
+            f"Question: {question}\n"
+            f"Résumé KPI: {kpi_summary}\n"
+            "Extraits principaux:\n"
+            f"{snippet_text}"
+        )
+    else:
+        answer = settings.llm_provider.generate(prompt)
     return {
         "answer": answer,
         "sources": sources,
