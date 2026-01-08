@@ -53,6 +53,8 @@ curl -X POST http://localhost:8000/rag/index \
   -d '{"pharma_id":"frang","path":"/data/docs"}'
 ```
 
+Uploader des documents via l'interface web : utilisez la section \"Documents\" pour déposer des fichiers puis lancer l'indexation automatique.
+
 Poser une question :
 
 ```bash

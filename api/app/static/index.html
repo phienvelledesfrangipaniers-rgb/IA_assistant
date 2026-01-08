@@ -183,6 +183,11 @@
         <div style="margin-top: 12px">
           <button id="rag-index-btn">Indexer</button>
         </div>
+        <div style="margin-top: 16px">
+          <label for="rag-files">Uploader des documents (PDF, DOCX, TXT)</label>
+          <input id="rag-files" type="file" multiple />
+          <button id="rag-upload-btn" style="margin-top: 8px">Uploader et indexer</button>
+        </div>
         <div style="margin-top: 12px">
           <label for="rag-question">Question</label>
           <textarea id="rag-question" rows="3" placeholder="Quels sont les top ventes ?"></textarea>
@@ -257,6 +262,26 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pharma_id: pharma, question }),
+        });
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      });
+
+      document.getElementById("rag-upload-btn").addEventListener("click", async () => {
+        const pharma = document.getElementById("rag-pharma").value;
+        const files = document.getElementById("rag-files").files;
+        const output = document.getElementById("rag-output");
+        if (!files.length) {
+          output.textContent = "Veuillez sélectionner au moins un fichier.";
+          return;
+        }
+        output.textContent = "Upload en cours...";
+        const formData = new FormData();
+        formData.append("pharma_id", pharma);
+        Array.from(files).forEach((file) => formData.append("files", file));
+        const response = await fetch("/rag/upload", {
+          method: "POST",
+          body: formData,
         });
         const data = await response.json();
         output.textContent = JSON.stringify(data, null, 2);

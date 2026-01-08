@@ -38,10 +38,13 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
       RAG_EMBEDDING_DIM: ${RAG_EMBEDDING_DIM:-128}
       RAG_CHUNK_SIZE: ${RAG_CHUNK_SIZE:-800}
+      RAG_UPLOAD_DIR: ${RAG_UPLOAD_DIR:-/data/uploads}
     depends_on:
       - db
     ports:
       - "${API_PORT:-8000}:8000"
+    volumes:
+      - rag_uploads:/data/uploads
 
   metabase:
     image: metabase/metabase:latest
@@ -60,3 +63,4 @@ services:
 volumes:
   db_data:
   metabase_data:
+  rag_uploads:

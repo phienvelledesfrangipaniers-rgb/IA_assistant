@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -92,6 +92,21 @@ def rag_index(payload: RagIndexPayload) -> dict[str, Any]:
         count = index_folder(payload.pharma_id, payload.path, rag_settings)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"status": "ok", "indexed": count}
+
+
+@app.post("/rag/upload")
+def rag_upload(
+    pharma_id: str = Form(...),
+    files: list[UploadFile] = File(...),
+) -> dict[str, Any]:
+    upload_dir = Path(os.environ.get("RAG_UPLOAD_DIR", "/data/uploads")) / pharma_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    for upload in files:
+        target = upload_dir / upload.filename
+        with target.open("wb") as buffer:
+            buffer.write(upload.file.read())
+    count = index_folder(pharma_id, str(upload_dir), rag_settings)
     return {"status": "ok", "indexed": count}
 
 
