@@ -4,8 +4,8 @@ DATASET_QUERIES = {
         "payload": {"query": "SALES_QUERY_PLACEHOLDER"},
     },
     "products": {
-        "method": "query_thread_data",
-        "payload": {"query": "SELECT * FROM produit LIMIT 100"},
+        "method": "query_thread",
+        "payload": {"sql": "SELECT * FROM produit LIMIT 100"},
     },
     "stock": {
         "method": "STOCK_QUERY_PLACEHOLDER",
@@ -16,11 +16,11 @@ DATASET_QUERIES = {
         "payload": {"query": "PURCHASES_QUERY_PLACEHOLDER"},
     },
     "orders": {
-        "method": "query_thread_data",
-        "payload": {"query": "SELECT * FROM orders LIMIT 100"},
+        "method": "query_thread",
+        "payload": {"sql": "SELECT * FROM orders LIMIT 100"},
     },
     "order_items": {
-        "method": "query_thread_data",
-        "payload": {"query": "SELECT * FROM orditem LIMIT 100"},
+        "method": "query_thread",
+        "payload": {"sql": "SELECT * FROM orditem LIMIT 100"},
     },
 }

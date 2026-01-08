@@ -24,6 +24,8 @@ class DataSnapClient:
         self.retries = retries
 
     def _endpoint(self, method_name: str) -> str:
+        if method_name == "query_thread":
+            return f"{self.base_url}/query_thread/"
         return f"{self.base_url}/datasnap/rest/TServerMethods1/%22{method_name}%22/"
 
     def call(self, method_name: str, payload: dict[str, Any]) -> DataSnapResponse:

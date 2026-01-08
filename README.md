@@ -29,6 +29,8 @@ Copiez `.env.example` en `.env` et ajustez :
 Ouvrez `http://localhost:8000/` pour accéder à la console web (extraction, KPI, RAG).
 La page de configuration est disponible sur `http://localhost:8000/config`.
 La page SQL (SELECT) est disponible sur `http://localhost:8000/sql`.
+Si `/sql` retourne `{"detail":"Not Found"}`, reconstruisez l'image API
+(`docker compose build api`) puis relancez le service (`docker compose up -d api`).
 
 ## Extraction Winpharma
 

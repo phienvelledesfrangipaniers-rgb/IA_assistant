@@ -143,7 +143,7 @@ def sql_query(payload: SqlQueryPayload) -> dict[str, Any]:
         raise HTTPException(status_code=404, detail="Unknown pharmacy")
     client = DataSnapClient(host)
     try:
-        response = client.call("query_thread_data", {"query": sql_text})
+        response = client.call("query_thread", {"sql": sql_text})
     except DataSnapError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"pharma_id": payload.pharma_id, "result": response.result}
