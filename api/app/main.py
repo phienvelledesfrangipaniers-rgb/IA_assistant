@@ -45,6 +45,11 @@ def home() -> FileResponse:
     return FileResponse(static_dir / "index.html")
 
 
+@app.get("/config")
+def config_page() -> FileResponse:
+    return FileResponse(static_dir / "config.html")
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"status": "ok", "database": check_connection()}

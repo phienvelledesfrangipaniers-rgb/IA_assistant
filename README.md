@@ -21,6 +21,7 @@ Copiez `.env.example` en `.env` et ajustez :
 ## Interface HTML
 
 Ouvrez `http://localhost:8000/` pour accéder à la console web (extraction, KPI, RAG).
+La page de configuration est disponible sur `http://localhost:8000/config`.
 
 ## Extraction Winpharma
 

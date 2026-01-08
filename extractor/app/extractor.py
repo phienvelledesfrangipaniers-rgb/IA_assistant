@@ -26,14 +26,14 @@ def extract_dataset(
     if not host:
         raise ExtractionError(f"Unknown pharmacy '{pharma_id}'")
 
-    query = DATASET_QUERIES[dataset]
+    query_config = DATASET_QUERIES[dataset]
     client = DataSnapClient(host, timeout=settings.datasnap_timeout, retries=settings.datasnap_retries)
-    payload = {"query": query}
+    payload = dict(query_config["payload"])
     if params:
         payload["params"] = params
 
     logger = get_logger("extractor", pharma_id=pharma_id, dataset=dataset)
-    response = client.call(query, payload)
+    response = client.call(query_config["method"], payload)
     logger.info("datasnap_response")
 
     return {"dataset": dataset, "result": response.result}

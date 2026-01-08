@@ -1,11 +1,18 @@
-SALES_QUERY = "SALES_QUERY_PLACEHOLDER"
-PRODUCTS_QUERY = "PRODUCTS_QUERY_PLACEHOLDER"
-STOCK_QUERY = "STOCK_QUERY_PLACEHOLDER"
-PURCHASES_QUERY = "PURCHASES_QUERY_PLACEHOLDER"
-
 DATASET_QUERIES = {
-    "sales": SALES_QUERY,
-    "products": PRODUCTS_QUERY,
-    "stock": STOCK_QUERY,
-    "purchases": PURCHASES_QUERY,
+    "sales": {
+        "method": "SALES_QUERY_PLACEHOLDER",
+        "payload": {"query": "SALES_QUERY_PLACEHOLDER"},
+    },
+    "products": {
+        "method": "query_thread_data",
+        "payload": {"query": "SELECT * FROM produit LIMIT 100"},
+    },
+    "stock": {
+        "method": "STOCK_QUERY_PLACEHOLDER",
+        "payload": {"query": "STOCK_QUERY_PLACEHOLDER"},
+    },
+    "purchases": {
+        "method": "PURCHASES_QUERY_PLACEHOLDER",
+        "payload": {"query": "PURCHASES_QUERY_PLACEHOLDER"},
+    },
 }
