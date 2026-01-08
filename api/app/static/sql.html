@@ -86,16 +86,54 @@
         font-weight: 600;
         cursor: pointer;
       }
-      pre {
-        background: #0f172a;
-        color: #e2e8f0;
-        padding: 12px;
-        border-radius: 8px;
-        overflow-x: auto;
-        font-size: 12px;
-      }
       a {
         color: #93c5fd;
+      }
+      .controls {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+      .table-wrapper {
+        overflow-x: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th,
+      td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f8fafc;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      tbody tr:nth-child(even) td {
+        background: #f9fafb;
+      }
+      .pagination {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .status {
+        font-size: 13px;
+        color: #4b5563;
+      }
+      .filter-row input {
+        font-size: 12px;
       }
     </style>
   </head>
@@ -106,6 +144,7 @@
         <a href="/">Console</a>
         <a href="/config">Configuration</a>
         <a class="active" href="/sql">SQL (SELECT)</a>
+        <a href="/env">Environnement</a>
       </nav>
       <div class="content">
         <header>
@@ -126,24 +165,189 @@
       </section>
       <section>
         <h2>Résultat</h2>
-        <pre id="sql-output">En attente d'une requête.</pre>
+        <div class="controls">
+          <div>
+            <label for="sql-filter">Filtre global</label>
+            <input id="sql-filter" placeholder="Rechercher une valeur..." />
+          </div>
+          <div>
+            <label for="sql-page-size">Taille de page</label>
+            <select id="sql-page-size">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+        <p class="status" id="sql-status">En attente d'une requête.</p>
+        <div class="table-wrapper">
+          <table id="sql-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pagination" style="margin-top: 12px">
+          <button id="sql-prev" class="secondary">Précédent</button>
+          <span id="sql-page-info">Page 1</span>
+          <button id="sql-next" class="secondary">Suivant</button>
+        </div>
       </section>
         </main>
       </div>
     </div>
     <script>
+      const table = document.getElementById("sql-table");
+      const tableHead = table.querySelector("thead");
+      const tableBody = table.querySelector("tbody");
+      const statusEl = document.getElementById("sql-status");
+      const filterInput = document.getElementById("sql-filter");
+      const pageSizeSelect = document.getElementById("sql-page-size");
+      const prevBtn = document.getElementById("sql-prev");
+      const nextBtn = document.getElementById("sql-next");
+      const pageInfo = document.getElementById("sql-page-info");
+
+      let rows = [];
+      let columns = [];
+      let columnFilters = {};
+      let page = 1;
+
+      function normalizeValue(value) {
+        if (value === null || value === undefined) return "";
+        if (typeof value === "object") return JSON.stringify(value);
+        return String(value);
+      }
+
+      function applyFilters() {
+        const globalFilter = filterInput.value.trim().toLowerCase();
+        return rows.filter((row) => {
+          if (globalFilter) {
+            const match = columns.some((col) =>
+              normalizeValue(row[col]).toLowerCase().includes(globalFilter)
+            );
+            if (!match) return false;
+          }
+          return columns.every((col) => {
+            const filterValue = (columnFilters[col] || "").trim().toLowerCase();
+            if (!filterValue) return true;
+            return normalizeValue(row[col]).toLowerCase().includes(filterValue);
+          });
+        });
+      }
+
+      function renderHeader() {
+        tableHead.innerHTML = "";
+        const headerRow = document.createElement("tr");
+        columns.forEach((col) => {
+          const th = document.createElement("th");
+          th.textContent = col;
+          headerRow.appendChild(th);
+        });
+        tableHead.appendChild(headerRow);
+
+        const filterRow = document.createElement("tr");
+        filterRow.className = "filter-row";
+        columns.forEach((col) => {
+          const th = document.createElement("th");
+          const input = document.createElement("input");
+          input.placeholder = "Filtrer";
+          input.value = columnFilters[col] || "";
+          input.addEventListener("input", () => {
+            columnFilters[col] = input.value;
+            page = 1;
+            renderTable();
+          });
+          th.appendChild(input);
+          filterRow.appendChild(th);
+        });
+        tableHead.appendChild(filterRow);
+      }
+
+      function renderTable() {
+        const filtered = applyFilters();
+        const pageSize = parseInt(pageSizeSelect.value, 10);
+        const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+        if (page > totalPages) page = totalPages;
+        const start = (page - 1) * pageSize;
+        const pageRows = filtered.slice(start, start + pageSize);
+
+        tableBody.innerHTML = "";
+        if (!pageRows.length) {
+          const emptyRow = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = Math.max(columns.length, 1);
+          cell.textContent = "Aucun résultat pour ces filtres.";
+          emptyRow.appendChild(cell);
+          tableBody.appendChild(emptyRow);
+        } else {
+          pageRows.forEach((row) => {
+            const tr = document.createElement("tr");
+            columns.forEach((col) => {
+              const td = document.createElement("td");
+              td.textContent = normalizeValue(row[col]);
+              tr.appendChild(td);
+            });
+            tableBody.appendChild(tr);
+          });
+        }
+
+        pageInfo.textContent = `Page ${page} / ${totalPages} (${filtered.length} lignes)`;
+        prevBtn.disabled = page <= 1;
+        nextBtn.disabled = page >= totalPages;
+      }
+
+      function setResults(result) {
+        if (Array.isArray(result)) {
+          rows = result;
+        } else if (result && typeof result === "object") {
+          rows = [result];
+        } else {
+          rows = [];
+        }
+        columns = rows.length ? Object.keys(rows[0]) : [];
+        columnFilters = {};
+        page = 1;
+        renderHeader();
+        renderTable();
+      }
+
       document.getElementById("sql-run").addEventListener("click", async () => {
         const pharma = document.getElementById("sql-pharma").value;
         const sql = document.getElementById("sql-query").value;
-        const output = document.getElementById("sql-output");
-        output.textContent = "Requête en cours...";
+        statusEl.textContent = "Requête en cours...";
         const response = await fetch("/sql/query", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pharma_id: pharma, sql }),
         });
         const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
+        if (!response.ok) {
+          statusEl.textContent = data.detail || "Erreur lors de la requête.";
+          setResults([]);
+          return;
+        }
+        statusEl.textContent = `Requête exécutée (${data.result?.length ?? 0} lignes).`;
+        setResults(data.result || []);
+      });
+
+      filterInput.addEventListener("input", () => {
+        page = 1;
+        renderTable();
+      });
+
+      pageSizeSelect.addEventListener("change", () => {
+        page = 1;
+        renderTable();
+      });
+
+      prevBtn.addEventListener("click", () => {
+        page = Math.max(1, page - 1);
+        renderTable();
+      });
+
+      nextBtn.addEventListener("click", () => {
+        page += 1;
+        renderTable();
       });
     </script>
   </body>

@@ -84,6 +84,7 @@
         <a href="/">Console</a>
         <a class="active" href="/config">Configuration</a>
         <a href="/sql">SQL (SELECT)</a>
+        <a href="/env">Environnement</a>
       </nav>
       <div class="content">
         <header>
@@ -101,7 +102,7 @@
       <section>
         <h2>Exemple de requête produit</h2>
         <p>Le POST envoie un JSON de la forme :</p>
-        <code>{"query": "SELECT * FROM produit LIMIT 100"}</code>
+        <code>{"sql": "SELECT * FROM produit LIMIT 100"}</code>
         <p>Headers requis :</p>
         <ul>
           <li><code>Accept: application/json</code></li>

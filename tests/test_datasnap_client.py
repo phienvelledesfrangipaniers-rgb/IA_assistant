@@ -24,6 +24,6 @@ def test_datasnap_client_success(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(httpx, "Client", MockClient)
 
     client = DataSnapClient("127.0.0.1", timeout=1, retries=1)
-    response = client.call("SALES_QUERY", {"query": "SALES_QUERY"})
+    response = client.call("SALES_QUERY", {"sql": "SALES_QUERY"})
 
     assert response.result == {"status": "ok"}

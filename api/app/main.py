@@ -47,6 +47,10 @@ class SqlQueryPayload(BaseModel):
     sql: str
 
 
+class EnvUpdatePayload(BaseModel):
+    content: str
+
+
 @app.get("/")
 def home() -> FileResponse:
     return FileResponse(static_dir / "index.html")
@@ -57,6 +61,16 @@ def config_page() -> FileResponse:
     return FileResponse(static_dir / "config.html")
 
 
+@app.get("/env")
+def env_page() -> FileResponse:
+    return FileResponse(static_dir / "env.html")
+
+
+@app.get("/env/")
+def env_page_slash() -> FileResponse:
+    return FileResponse(static_dir / "env.html")
+
+
 @app.get("/sql")
 def sql_page() -> FileResponse:
     return FileResponse(static_dir / "sql.html")
@@ -65,6 +79,43 @@ def sql_page() -> FileResponse:
 @app.get("/sql/")
 def sql_page_slash() -> FileResponse:
     return FileResponse(static_dir / "sql.html")
+
+
+def _env_file_path() -> Path:
+    return Path(os.environ.get("ENV_FILE", ".env"))
+
+
+def _read_env_file() -> str:
+    env_file = _env_file_path()
+    if not env_file.exists():
+        return ""
+    return env_file.read_text(encoding="utf-8")
+
+
+def _apply_env_content(content: str) -> None:
+    for line in content.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        os.environ[key.strip()] = value
+
+
+@app.get("/env/load")
+def env_load() -> dict[str, Any]:
+    env_file = _env_file_path()
+    return {"path": str(env_file), "content": _read_env_file()}
+
+
+@app.post("/env/save")
+def env_save(payload: EnvUpdatePayload) -> dict[str, Any]:
+    env_file = _env_file_path()
+    env_file.write_text(payload.content, encoding="utf-8")
+    _apply_env_content(payload.content)
+    return {"status": "ok", "path": str(env_file)}
 
 
 @app.get("/health")
