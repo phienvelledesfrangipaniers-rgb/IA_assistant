@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import os
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .db import check_connection
@@ -15,6 +18,10 @@ from .rag.service import RagSettings, answer_question, index_folder, load_rag_se
 app = FastAPI(title="Assistant IA Pharmacie API")
 
 rag_settings: RagSettings = load_rag_settings()
+
+static_dir = Path(__file__).parent / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 class ExtractPayload(BaseModel):
@@ -31,6 +38,11 @@ class RagAskPayload(BaseModel):
     question: str
     start: date | None = None
     end: date | None = None
+
+
+@app.get("/")
+def home() -> FileResponse:
+    return FileResponse(static_dir / "index.html")
 
 
 @app.get("/health")

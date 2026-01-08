@@ -18,6 +18,10 @@ Copiez `.env.example` en `.env` et ajustez :
 - `DATABASE_URL` : URL Postgres.
 - `EXTRACTOR_URL` : URL du service extractor (appelé par l'API).
 
+## Interface HTML
+
+Ouvrez `http://localhost:8000/` pour accéder à la console web (extraction, KPI, RAG).
+
 ## Extraction Winpharma
 
 Déclenchez une extraction via l'API :
