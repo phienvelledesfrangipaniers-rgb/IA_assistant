@@ -11,6 +11,40 @@
         background: #f5f7fb;
         color: #111827;
       }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      nav {
+        width: 220px;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      nav h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 12px 0;
+        color: #94a3b8;
+      }
+      nav a {
+        color: #e2e8f0;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: block;
+      }
+      nav a.active,
+      nav a:hover {
+        background: #1e293b;
+      }
+      .content {
+        flex: 1;
+      }
       header {
         background: #111827;
         color: #fff;
@@ -66,14 +100,19 @@
     </style>
   </head>
   <body>
-    <header>
-      <h1>SQL Winpharma</h1>
-      <p>
-        Exécutez des requêtes SELECT sur une pharmacie via DataSnap.
-        <a href="/">Retour à la console</a>
-      </p>
-    </header>
-    <main>
+    <div class="layout">
+      <nav>
+        <h2>Navigation</h2>
+        <a href="/">Console</a>
+        <a href="/config">Configuration</a>
+        <a class="active" href="/sql">SQL (SELECT)</a>
+      </nav>
+      <div class="content">
+        <header>
+          <h1>SQL Winpharma</h1>
+          <p>Exécutez des requêtes SELECT sur une pharmacie via DataSnap.</p>
+        </header>
+        <main>
       <section>
         <label for="sql-pharma">Pharmacie</label>
         <input id="sql-pharma" placeholder="frang" value="frang" />
@@ -89,7 +128,9 @@
         <h2>Résultat</h2>
         <pre id="sql-output">En attente d'une requête.</pre>
       </section>
-    </main>
+        </main>
+      </div>
+    </div>
     <script>
       document.getElementById("sql-run").addEventListener("click", async () => {
         const pharma = document.getElementById("sql-pharma").value;

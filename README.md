@@ -12,6 +12,9 @@ Les scripts SQL sont appliqués automatiquement au démarrage de Postgres (copi�
 Si le conteneur `ia_pharma_db` affiche encore `Permission denied` sur `/docker-entrypoint-initdb.d`,
 vérifiez que l'image DB est bien reconstruite (`docker compose build db`) et que le dossier
 `sql/` est lisible par Docker (ex: `chmod -R a+rX sql`).
+Si vous voyez encore l'erreur de schéma `rag`, reconstruisez sans cache
+(`docker compose build db --no-cache`) puis supprimez le volume et relancez
+(`docker compose down -v` puis `docker compose up --build`).
 
 ## Configuration
 

@@ -14,6 +14,40 @@
         background: #f5f7fb;
         color: #1f2937;
       }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      nav {
+        width: 220px;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      nav h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 12px 0;
+        color: #94a3b8;
+      }
+      nav a {
+        color: #e2e8f0;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: block;
+      }
+      nav a.active,
+      nav a:hover {
+        background: #1e293b;
+      }
+      .content {
+        flex: 1;
+      }
       header {
         background: #111827;
         color: #fff;
@@ -107,15 +141,19 @@
     </style>
   </head>
   <body>
-    <header>
-      <h1>Assistant IA Pharmacie</h1>
-      <p>Console de pilotage pour extraction Winpharma, KPI et RAG.</p>
-      <p>
-        <a href="/config" style="color: #93c5fd">Accéder à la configuration</a>
-        · <a href="/sql" style="color: #93c5fd">Exécuter un SELECT</a>
-      </p>
-    </header>
-    <main>
+    <div class="layout">
+      <nav>
+        <h2>Navigation</h2>
+        <a class="active" href="/">Console</a>
+        <a href="/config">Configuration</a>
+        <a href="/sql">SQL (SELECT)</a>
+      </nav>
+      <div class="content">
+        <header>
+          <h1>Assistant IA Pharmacie</h1>
+          <p>Console de pilotage pour extraction Winpharma, KPI et RAG.</p>
+        </header>
+        <main>
       <section>
         <h2>État de l'API</h2>
         <div class="status">
@@ -201,7 +239,9 @@
         </div>
         <pre id="rag-output">Indexez des documents ou posez une question.</pre>
       </section>
-    </main>
+        </main>
+      </div>
+    </div>
     <script>
       const healthBtn = document.getElementById("health-btn");
       const healthOutput = document.getElementById("health-output");
