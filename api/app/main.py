@@ -11,6 +11,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from .config import get_pharmacy_hosts
+from .datasnap import DataSnapClient, DataSnapError
 from .db import check_connection
 from .kpi import get_purchase_changes, get_sales_kpi, get_stock_alerts
 from .rag.service import RagSettings, answer_question, index_folder, load_rag_settings
@@ -40,6 +42,11 @@ class RagAskPayload(BaseModel):
     end: date | None = None
 
 
+class SqlQueryPayload(BaseModel):
+    pharma_id: str
+    sql: str
+
+
 @app.get("/")
 def home() -> FileResponse:
     return FileResponse(static_dir / "index.html")
@@ -48,6 +55,11 @@ def home() -> FileResponse:
 @app.get("/config")
 def config_page() -> FileResponse:
     return FileResponse(static_dir / "config.html")
+
+
+@app.get("/sql")
+def sql_page() -> FileResponse:
+    return FileResponse(static_dir / "sql.html")
 
 
 @app.get("/health")
@@ -113,6 +125,23 @@ def rag_upload(
             buffer.write(upload.file.read())
     count = index_folder(pharma_id, str(upload_dir), rag_settings)
     return {"status": "ok", "indexed": count}
+
+
+@app.post("/sql/query")
+def sql_query(payload: SqlQueryPayload) -> dict[str, Any]:
+    sql_text = payload.sql.strip()
+    if not sql_text.lower().startswith("select"):
+        raise HTTPException(status_code=400, detail="Only SELECT queries are allowed")
+    hosts = get_pharmacy_hosts()
+    host = hosts.get(payload.pharma_id)
+    if not host:
+        raise HTTPException(status_code=404, detail="Unknown pharmacy")
+    client = DataSnapClient(host)
+    try:
+        response = client.call("query_thread_data", {"query": sql_text})
+    except DataSnapError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"pharma_id": payload.pharma_id, "result": response.result}
 
 
 @app.post("/rag/ask")

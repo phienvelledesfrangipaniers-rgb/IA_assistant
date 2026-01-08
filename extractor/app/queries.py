@@ -15,4 +15,12 @@ DATASET_QUERIES = {
         "method": "PURCHASES_QUERY_PLACEHOLDER",
         "payload": {"query": "PURCHASES_QUERY_PLACEHOLDER"},
     },
+    "orders": {
+        "method": "query_thread_data",
+        "payload": {"query": "SELECT * FROM orders LIMIT 100"},
+    },
+    "order_items": {
+        "method": "query_thread_data",
+        "payload": {"query": "SELECT * FROM orditem LIMIT 100"},
+    },
 }

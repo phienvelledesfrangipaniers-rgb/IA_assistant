@@ -25,6 +25,7 @@ Copiez `.env.example` en `.env` et ajustez :
 
 Ouvrez `http://localhost:8000/` pour accéder à la console web (extraction, KPI, RAG).
 La page de configuration est disponible sur `http://localhost:8000/config`.
+La page SQL (SELECT) est disponible sur `http://localhost:8000/sql`.
 
 ## Extraction Winpharma
 
