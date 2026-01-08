@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configuration - Assistant IA Pharmacie</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #111827;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 20px 28px;
+      }
+      main {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 24px 40px;
+        display: grid;
+        gap: 16px;
+      }
+      section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      }
+      code {
+        background: #f1f5f9;
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+      ul {
+        margin: 12px 0 0;
+        padding-left: 18px;
+      }
+      a {
+        color: #2563eb;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Configuration</h1>
+      <p>Rappels pour configurer les pharmacies et le connecteur Winpharma.</p>
+    </header>
+    <main>
+      <section>
+        <h2>Adresse du connecteur Winpharma</h2>
+        <p>
+          Le connecteur DataSnap est accessible sur
+          <code>http://&lt;IP&gt;:8001/datasnap/rest/TServerMethods1/%22query_thread_data%22/</code>.
+        </p>
+      </section>
+      <section>
+        <h2>Exemple de requête produit</h2>
+        <p>Le POST envoie un JSON de la forme :</p>
+        <code>{"query": "SELECT * FROM produit LIMIT 100"}</code>
+        <p>Headers requis :</p>
+        <ul>
+          <li><code>Accept: application/json</code></li>
+          <li><code>Content-Type: application/json</code></li>
+        </ul>
+        <p>La réponse se trouve dans <code>data["result"][0]</code>.</p>
+      </section>
+      <section>
+        <h2>Configuration multi-pharmacie</h2>
+        <p>Définissez vos hôtes dans le fichier <code>.env</code> :</p>
+        <code>PHARMACY_HOSTS=frang=192.168.0.100,gpp=192.168.0.101</code>
+        <p>
+          Retour à la console : <a href="/">ouvrir la console</a>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>
