@@ -1,19 +1,28 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
 
 from .query_store import list_queries, replace_queries
 
-CATALOG_PATH = Path(__file__).resolve().parents[2] / "docs" / "queries_catalog.md"
+DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[2] / "docs" / "queries_catalog.md"
+CATALOG_PATH = Path(os.environ.get("QUERIES_CATALOG_PATH", str(DEFAULT_CATALOG_PATH)))
 
 
 def read_catalog_content() -> str:
-    return CATALOG_PATH.read_text(encoding="utf-8")
+    try:
+        return CATALOG_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        content = render_catalog([])
+        CATALOG_PATH.write_text(content, encoding="utf-8")
+        return content
 
 
 def write_catalog_content(content: str) -> None:
+    CATALOG_PATH.parent.mkdir(parents=True, exist_ok=True)
     CATALOG_PATH.write_text(content, encoding="utf-8")
 
 
