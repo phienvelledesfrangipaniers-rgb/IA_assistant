@@ -30,7 +30,8 @@ services:
 
   api:
     build:
-      context: ./api
+      context: .
+      dockerfile: api/Dockerfile
     container_name: ia_pharma_api
     environment:
       DATABASE_URL: ${DATABASE_URL}
