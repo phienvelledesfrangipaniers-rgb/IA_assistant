@@ -248,29 +248,22 @@
 
       async function loadCatalog() {
         catalogStatus.textContent = "Chargement du catalogue...";
-        const response = await fetch("/queries/catalog");
-        let data = {};
-        try {
-          data = await response.json();
-        } catch (error) {
-          const text = await response.text();
+        const response = await fetch("/queries/catalog/raw");
+        const text = await response.text();
+        if (!response.ok) {
           catalogStatus.textContent = text || "Erreur lors du chargement.";
           return;
         }
-        if (!response.ok) {
-          catalogStatus.textContent = data.detail || "Erreur lors du chargement.";
-          return;
-        }
-        catalogContent.value = data.content || "";
+        catalogContent.value = text || "";
         catalogStatus.textContent = "Catalogue chargé.";
       }
 
       async function saveCatalog() {
         catalogStatus.textContent = "Enregistrement du catalogue...";
-        const response = await fetch("/queries/catalog", {
+        const response = await fetch("/queries/catalog/raw", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: catalogContent.value }),
+          headers: { "Content-Type": "text/plain" },
+          body: catalogContent.value,
         });
         let data = {};
         try {

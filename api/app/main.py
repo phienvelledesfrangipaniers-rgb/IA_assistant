@@ -7,8 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -539,6 +539,11 @@ def queries_catalog_read() -> dict[str, Any]:
     return {"content": read_catalog_content()}
 
 
+@app.get("/queries/catalog/raw")
+def queries_catalog_read_raw() -> PlainTextResponse:
+    return PlainTextResponse(read_catalog_content())
+
+
 @app.put("/queries/catalog")
 def queries_catalog_write(
     payload: CatalogPayload | list[dict[str, Any]] | str = Body(...)
@@ -551,6 +556,13 @@ def queries_catalog_write(
         content = payload
     else:
         raise HTTPException(status_code=422, detail="Invalid catalog payload")
+    write_catalog_content(content)
+    return {"status": "ok"}
+
+
+@app.put("/queries/catalog/raw")
+async def queries_catalog_write_raw(request: Request) -> dict[str, Any]:
+    content = (await request.body()).decode("utf-8")
     write_catalog_content(content)
     return {"status": "ok"}
 
