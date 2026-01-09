@@ -204,8 +204,12 @@
       <nav>
         <h2>Navigation</h2>
         <a href="/">Console</a>
+        <a href="/extraction">Extractions</a>
+        <a href="/kpi">KPI</a>
+        <a href="/rag">RAG</a>
+        <a href="/prompt">Prompt</a>
+        <a class="active" href="/sql">SQL</a>
         <a href="/config">Configuration</a>
-        <a class="active" href="/sql">SQL (SELECT)</a>
         <a href="/env">Environnement</a>
       </nav>
       <div class="content">
@@ -516,13 +520,14 @@
           const label = document.createElement("label");
           label.style.display = "flex";
           label.style.gap = "6px";
-          label.style.alignItems = "center";
+          label.style.alignItems = "flex-start";
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
           checkbox.value = col.name;
           checkbox.checked = true;
           label.appendChild(checkbox);
           const text = document.createElement("span");
+          text.style.textAlign = "left";
           text.textContent = col.data_type ? `${col.name} (${col.data_type})` : col.name;
           label.appendChild(text);
           columnsContainer.appendChild(label);
