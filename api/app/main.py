@@ -496,8 +496,12 @@ def queries_catalog_write(payload: CatalogPayload) -> dict[str, Any]:
 @app.post("/queries/catalog/import")
 def queries_catalog_import() -> dict[str, Any]:
     content = read_catalog_content()
-    entries = import_catalog_queries(content)
-    return {"status": "ok", "count": len(entries)}
+    try:
+        entries = import_catalog_queries(content)
+        return {"status": "ok", "count": len(entries)}
+    except Exception as exc:
+        entries = catalog_entries_with_names(content)
+        return {"status": "warning", "count": len(entries), "detail": str(exc)}
 
 
 @app.post("/queries/catalog/export")
