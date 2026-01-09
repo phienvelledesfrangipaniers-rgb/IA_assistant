@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt - Assistant IA Pharmacie</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      nav {
+        width: 220px;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      nav h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 12px 0;
+        color: #94a3b8;
+      }
+      nav a {
+        color: #e2e8f0;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: block;
+      }
+      nav a.active,
+      nav a:hover {
+        background: #1e293b;
+      }
+      .content {
+        flex: 1;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 24px 32px;
+      }
+      main {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 24px 48px;
+        display: grid;
+        gap: 20px;
+      }
+      section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+        color: #4b5563;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+      button {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h2>Navigation</h2>
+        <a href="/">Console</a>
+        <a href="/extraction">Extractions</a>
+        <a href="/kpi">KPI</a>
+        <a href="/rag">RAG</a>
+        <a class="active" href="/prompt">Prompt</a>
+        <a href="/sql">SQL</a>
+        <a href="/env">Environnement</a>
+      </nav>
+      <div class="content">
+        <header>
+          <h1>Prompt IA</h1>
+          <p>Poser une question métier en utilisant les documents et KPI.</p>
+        </header>
+        <main>
+          <section>
+            <div class="grid">
+              <div>
+                <label for="prompt-pharma">Pharmacie</label>
+                <input id="prompt-pharma" placeholder="frang" value="frang" />
+              </div>
+            </div>
+            <div style="margin-top: 12px">
+              <label for="prompt-question">Question</label>
+              <textarea id="prompt-question" rows="4" placeholder="Quels sont les top ventes ?"></textarea>
+              <button id="prompt-ask" style="margin-top: 8px">Poser la question</button>
+            </div>
+            <pre id="prompt-output">Posez une question pour obtenir une réponse.</pre>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      document.getElementById("prompt-ask").addEventListener("click", async () => {
+        const pharma = document.getElementById("prompt-pharma").value;
+        const question = document.getElementById("prompt-question").value;
+        const output = document.getElementById("prompt-output");
+        output.textContent = "Analyse en cours...";
+        const response = await fetch("/rag/ask", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pharma_id: pharma, question }),
+        });
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      });
+    </script>
+  </body>
+</html>

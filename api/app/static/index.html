@@ -78,26 +78,6 @@
         margin: 0 0 12px 0;
         font-size: 18px;
       }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 12px;
-      }
-      label {
-        display: block;
-        font-size: 13px;
-        margin-bottom: 6px;
-        color: #4b5563;
-      }
-      input,
-      select,
-      textarea {
-        width: 100%;
-        padding: 8px 10px;
-        border-radius: 8px;
-        border: 1px solid #e5e7eb;
-        font-size: 14px;
-      }
       button {
         background: #2563eb;
         color: #fff;
@@ -106,10 +86,6 @@
         padding: 10px 14px;
         font-weight: 600;
         cursor: pointer;
-      }
-      button.secondary {
-        background: #e5e7eb;
-        color: #111827;
       }
       pre {
         background: #0f172a;
@@ -138,6 +114,43 @@
         background: #fef9c3;
         color: #854d0e;
       }
+      .status-grid {
+        display: grid;
+        gap: 8px;
+      }
+      .status-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+      .status-row span {
+        font-size: 13px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .card-link {
+        display: block;
+        padding: 16px;
+        border-radius: 12px;
+        background: #eff6ff;
+        color: #1e3a8a;
+        text-decoration: none;
+        font-weight: 600;
+      }
+      .card-link span {
+        display: block;
+        margin-top: 6px;
+        font-size: 12px;
+        font-weight: 400;
+        color: #475569;
+      }
     </style>
   </head>
   <body>
@@ -145,8 +158,11 @@
       <nav>
         <h2>Navigation</h2>
         <a class="active" href="/">Console</a>
-        <a href="/config">Configuration</a>
-        <a href="/sql">SQL (SELECT)</a>
+        <a href="/extraction">Extractions</a>
+        <a href="/kpi">KPI</a>
+        <a href="/rag">RAG</a>
+        <a href="/prompt">Prompt</a>
+        <a href="/sql">SQL</a>
         <a href="/env">Environnement</a>
       </nav>
       <div class="content">
@@ -155,91 +171,31 @@
           <p>Console de pilotage pour extraction Winpharma, KPI et RAG.</p>
         </header>
         <main>
-      <section>
-        <h2>État de l'API</h2>
-        <div class="status">
-          <button id="health-btn">Tester /health</button>
-          <span id="health-status" class="pill warn">Non testé</span>
-        </div>
-        <pre id="health-output">Cliquez sur "Tester /health" pour vérifier la connexion.</pre>
-      </section>
+          <section>
+            <h2>Raccourcis</h2>
+            <div class="cards">
+              <a class="card-link" href="/extraction">Extractions<span>Déclencher des imports Winpharma.</span></a>
+              <a class="card-link" href="/kpi">KPI<span>Consulter les indicateurs clés.</span></a>
+              <a class="card-link" href="/rag">RAG<span>Indexer et gérer les documents.</span></a>
+              <a class="card-link" href="/prompt">Prompt<span>Poser des questions métier.</span></a>
+              <a class="card-link" href="/sql">SQL<span>Construire des requêtes visuelles.</span></a>
+            </div>
+          </section>
 
-      <section>
-        <h2>Extraction Winpharma</h2>
-        <div class="grid">
-          <div>
-            <label for="extract-pharma">Pharmacie</label>
-            <input id="extract-pharma" placeholder="frang" value="frang" />
-          </div>
-          <div>
-            <label for="extract-dataset">Dataset</label>
-            <select id="extract-dataset">
-              <option value="sales">sales</option>
-              <option value="products">products</option>
-              <option value="stock">stock</option>
-              <option value="purchases">purchases</option>
-              <option value="orders">orders</option>
-              <option value="order_items">order_items</option>
-            </select>
-          </div>
-        </div>
-        <div style="margin-top: 12px">
-          <button id="extract-btn">Lancer l'extraction</button>
-        </div>
-        <pre id="extract-output">Aucune extraction lancée.</pre>
-      </section>
+          <section>
+            <h2>État de l'API</h2>
+            <div class="status">
+              <button id="health-btn">Tester /health</button>
+              <span id="health-status" class="pill warn">Non testé</span>
+            </div>
+            <pre id="health-output">Cliquez sur "Tester /health" pour vérifier la connexion.</pre>
+          </section>
 
-      <section>
-        <h2>KPI</h2>
-        <div class="grid">
-          <div>
-            <label for="kpi-pharma">Pharmacie</label>
-            <input id="kpi-pharma" placeholder="frang" value="frang" />
-          </div>
-          <div>
-            <label for="kpi-from">Du</label>
-            <input id="kpi-from" type="date" />
-          </div>
-          <div>
-            <label for="kpi-to">Au</label>
-            <input id="kpi-to" type="date" />
-          </div>
-        </div>
-        <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap">
-          <button class="secondary" data-kpi="sales">Ventes</button>
-          <button class="secondary" data-kpi="stock_alerts">Alertes stock</button>
-          <button class="secondary" data-kpi="purchases">Achats</button>
-        </div>
-        <pre id="kpi-output">Sélectionnez un KPI.</pre>
-      </section>
-
-      <section>
-        <h2>RAG (documents internes)</h2>
-        <div class="grid">
-          <div>
-            <label for="rag-pharma">Pharmacie</label>
-            <input id="rag-pharma" placeholder="frang" value="frang" />
-          </div>
-          <div>
-            <label for="rag-path">Dossier à indexer</label>
-            <input id="rag-path" placeholder="/data/docs" />
-          </div>
-        </div>
-        <div style="margin-top: 12px">
-          <button id="rag-index-btn">Indexer</button>
-        </div>
-        <div style="margin-top: 16px">
-          <label for="rag-files">Uploader des documents (PDF, DOCX, TXT)</label>
-          <input id="rag-files" type="file" multiple />
-          <button id="rag-upload-btn" style="margin-top: 8px">Uploader et indexer</button>
-        </div>
-        <div style="margin-top: 12px">
-          <label for="rag-question">Question</label>
-          <textarea id="rag-question" rows="3" placeholder="Quels sont les top ventes ?"></textarea>
-          <button id="rag-ask-btn" style="margin-top: 8px">Poser la question</button>
-        </div>
-        <pre id="rag-output">Indexez des documents ou posez une question.</pre>
-      </section>
+          <section>
+            <h2>Test des pharmacies</h2>
+            <p>Test automatique de <code>http://&lt;ip&gt;:8001/test/</code> à l'ouverture.</p>
+            <div id="pharmacy-status" class="status-grid"></div>
+          </section>
         </main>
       </div>
     </div>
@@ -257,82 +213,34 @@
         healthStatus.className = `pill ${data.database ? "ok" : "warn"}`;
       });
 
-      document.getElementById("extract-btn").addEventListener("click", async () => {
-        const pharma = document.getElementById("extract-pharma").value;
-        const dataset = document.getElementById("extract-dataset").value;
-        const output = document.getElementById("extract-output");
-        output.textContent = "Extraction en cours...";
-        const response = await fetch(`/extract/${pharma}/${dataset}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ params: null }),
-        });
-        const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
-      });
-
-      document.querySelectorAll("button[data-kpi]").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const pharma = document.getElementById("kpi-pharma").value;
-          const from = document.getElementById("kpi-from").value;
-          const to = document.getElementById("kpi-to").value;
-          const endpoint = btn.dataset.kpi;
-          const params = new URLSearchParams();
-          if (from) params.append("from", from);
-          if (to) params.append("to", to);
-          const response = await fetch(`/kpi/${pharma}/${endpoint}?${params.toString()}`);
+      async function loadPharmacyTests() {
+        const container = document.getElementById("pharmacy-status");
+        container.textContent = "Tests en cours...";
+        try {
+          const response = await fetch("/pharmacies/test");
           const data = await response.json();
-          document.getElementById("kpi-output").textContent = JSON.stringify(data, null, 2);
-        });
-      });
-
-      document.getElementById("rag-index-btn").addEventListener("click", async () => {
-        const pharma = document.getElementById("rag-pharma").value;
-        const path = document.getElementById("rag-path").value;
-        const output = document.getElementById("rag-output");
-        output.textContent = "Indexation en cours...";
-        const response = await fetch("/rag/index", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pharma_id: pharma, path }),
-        });
-        const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
-      });
-
-      document.getElementById("rag-ask-btn").addEventListener("click", async () => {
-        const pharma = document.getElementById("rag-pharma").value;
-        const question = document.getElementById("rag-question").value;
-        const output = document.getElementById("rag-output");
-        output.textContent = "Analyse en cours...";
-        const response = await fetch("/rag/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ pharma_id: pharma, question }),
-        });
-        const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
-      });
-
-      document.getElementById("rag-upload-btn").addEventListener("click", async () => {
-        const pharma = document.getElementById("rag-pharma").value;
-        const files = document.getElementById("rag-files").files;
-        const output = document.getElementById("rag-output");
-        if (!files.length) {
-          output.textContent = "Veuillez sélectionner au moins un fichier.";
-          return;
+          container.innerHTML = "";
+          (data.items || []).forEach((item) => {
+            const row = document.createElement("div");
+            row.className = "status-row";
+            const label = document.createElement("span");
+            label.textContent = `${item.pharma_id} (${item.host})`;
+            const badge = document.createElement("span");
+            badge.className = `pill ${item.ok ? "ok" : "warn"}`;
+            badge.textContent = item.ok ? "OK" : "Fail";
+            const detail = document.createElement("span");
+            detail.textContent = item.detail;
+            row.appendChild(label);
+            row.appendChild(badge);
+            row.appendChild(detail);
+            container.appendChild(row);
+          });
+        } catch (error) {
+          container.textContent = `Erreur: ${error}`;
         }
-        output.textContent = "Upload en cours...";
-        const formData = new FormData();
-        formData.append("pharma_id", pharma);
-        Array.from(files).forEach((file) => formData.append("files", file));
-        const response = await fetch("/rag/upload", {
-          method: "POST",
-          body: formData,
-        });
-        const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
-      });
+      }
+
+      loadPharmacyTests();
     </script>
   </body>
 </html>

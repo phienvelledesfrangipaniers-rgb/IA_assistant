@@ -76,6 +76,46 @@ def config_page() -> FileResponse:
     return FileResponse(static_dir / "config.html")
 
 
+@app.get("/extraction")
+def extraction_page() -> FileResponse:
+    return FileResponse(static_dir / "extraction.html")
+
+
+@app.get("/extraction/")
+def extraction_page_slash() -> FileResponse:
+    return FileResponse(static_dir / "extraction.html")
+
+
+@app.get("/kpi")
+def kpi_page() -> FileResponse:
+    return FileResponse(static_dir / "kpi.html")
+
+
+@app.get("/kpi/")
+def kpi_page_slash() -> FileResponse:
+    return FileResponse(static_dir / "kpi.html")
+
+
+@app.get("/rag")
+def rag_page() -> FileResponse:
+    return FileResponse(static_dir / "rag.html")
+
+
+@app.get("/rag/")
+def rag_page_slash() -> FileResponse:
+    return FileResponse(static_dir / "rag.html")
+
+
+@app.get("/prompt")
+def prompt_page() -> FileResponse:
+    return FileResponse(static_dir / "prompt.html")
+
+
+@app.get("/prompt/")
+def prompt_page_slash() -> FileResponse:
+    return FileResponse(static_dir / "prompt.html")
+
+
 @app.get("/env")
 def env_page() -> FileResponse:
     return FileResponse(static_dir / "env.html")
@@ -136,6 +176,22 @@ def env_save(payload: EnvUpdatePayload) -> dict[str, Any]:
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {"status": "ok", "database": check_connection()}
+
+
+@app.get("/pharmacies/test")
+def pharmacies_test() -> dict[str, Any]:
+    results = []
+    for pharma_id, host in get_pharmacy_hosts().items():
+        url = f"http://{host}:8001/test/"
+        try:
+            response = httpx.get(url, timeout=5)
+            ok = response.status_code == 200
+            detail = f"HTTP {response.status_code}"
+        except httpx.HTTPError as exc:
+            ok = False
+            detail = str(exc)
+        results.append({"pharma_id": pharma_id, "host": host, "ok": ok, "detail": detail})
+    return {"items": results}
 
 
 @app.post("/extract/{pharma_id}/{dataset}")
