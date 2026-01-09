@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SQL Winpharma - Assistant IA Pharmacie</title>
+    <link rel="icon" type="image/svg+xml" href="/static/assets/favicon.svg" />
+    <link rel="stylesheet" href="/static/theme.css" />
     <style>
       body {
         margin: 0;
@@ -124,11 +126,6 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-      }
-      .catalog-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
       }
       .tabs {
         display: flex;
@@ -365,6 +362,10 @@
   <body>
     <div class="layout">
       <nav>
+        <div class="brand">
+          <img src="/static/assets/logo.svg" alt="PharmaAI" />
+          <span>PharmaAI</span>
+        </div>
         <h2>Navigation</h2>
         <a href="/">Console</a>
         <a href="/extraction">Extractions</a>
@@ -465,20 +466,6 @@
               <button id="saved-query-delete" class="secondary">Supprimer</button>
             </div>
           </div>
-          <div class="builder-panel">
-            <h3 class="panel-title">Catalogue des requêtes pré-enregistrées</h3>
-            <p style="margin: 0; font-size: 13px; color: #4b5563">
-              Le fichier <code>docs/queries_catalog.md</code> est affiché ici et peut être modifié en direct.
-            </p>
-            <label for="catalog-content" style="margin-top: 8px">Contenu du catalogue</label>
-            <textarea id="catalog-content" rows="12" placeholder="Chargement du catalogue..."></textarea>
-            <div class="catalog-actions" style="margin-top: 8px">
-              <button id="catalog-load" class="secondary">Recharger</button>
-              <button id="catalog-save">Enregistrer le fichier</button>
-              <button id="catalog-import" class="secondary">Importer vers la base</button>
-              <button id="catalog-export" class="secondary">Exporter depuis la base</button>
-            </div>
-          </div>
         </div>
           </div>
         </div>
@@ -560,11 +547,6 @@
       const savedQuerySave = document.getElementById("saved-query-save");
       const savedQueryDelete = document.getElementById("saved-query-delete");
       const savedQueryNew = document.getElementById("saved-query-new");
-      const catalogContent = document.getElementById("catalog-content");
-      const catalogLoad = document.getElementById("catalog-load");
-      const catalogSave = document.getElementById("catalog-save");
-      const catalogImport = document.getElementById("catalog-import");
-      const catalogExport = document.getElementById("catalog-export");
       let savedQueries = [];
       let activeQueryId = null;
 
@@ -1012,20 +994,6 @@
         });
       }
 
-      async function loadCatalog() {
-        const response = await fetch("/queries/catalog");
-        const data = await response.json();
-        catalogContent.value = data.content || "";
-      }
-
-      async function saveCatalog() {
-        await fetch("/queries/catalog", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: catalogContent.value }),
-        });
-      }
-
       document.getElementById("sql-run").addEventListener("click", async () => {
         const pharma = pharmaSelect.value;
         const sql = queryInput.value;
@@ -1104,35 +1072,6 @@
         await loadSavedQueries();
         resetSavedQueryForm();
         statusEl.textContent = "Requête supprimée.";
-      });
-
-      catalogLoad.addEventListener("click", async () => {
-        await loadCatalog();
-        statusEl.textContent = "Catalogue rechargé.";
-      });
-
-      catalogSave.addEventListener("click", async () => {
-        await saveCatalog();
-        statusEl.textContent = "Catalogue enregistré.";
-      });
-
-      catalogImport.addEventListener("click", async () => {
-        const confirmed = confirm(
-          "Importer le catalogue va remplacer toutes les requêtes enregistrées en base. Continuer ?"
-        );
-        if (!confirmed) return;
-        await saveCatalog();
-        const response = await fetch("/queries/catalog/import", { method: "POST" });
-        const data = await response.json();
-        await loadSavedQueries();
-        statusEl.textContent = `Catalogue importé (${data.count ?? 0} requêtes).`;
-      });
-
-      catalogExport.addEventListener("click", async () => {
-        const response = await fetch("/queries/catalog/export", { method: "POST" });
-        const data = await response.json();
-        catalogContent.value = data.content || "";
-        statusEl.textContent = "Catalogue exporté depuis la base.";
       });
 
       pharmaSelect.addEventListener("change", async () => {

@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Configuration - Assistant IA Pharmacie</title>
+    <link rel="icon" type="image/svg+xml" href="/static/assets/favicon.svg" />
+    <link rel="stylesheet" href="/static/theme.css" />
     <style>
       body {
         margin: 0;
@@ -63,6 +65,49 @@
         padding: 20px;
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
       }
+      label {
+        display: block;
+        font-size: 13px;
+        margin: 12px 0 6px;
+        color: #4b5563;
+      }
+      input,
+      textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+      textarea {
+        min-height: 220px;
+        font-family: "JetBrains Mono", "SFMono-Regular", ui-monospace, monospace;
+      }
+      button {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #e5e7eb;
+        color: #111827;
+      }
+      .actions,
+      .catalog-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .status {
+        margin-top: 12px;
+        font-size: 13px;
+        color: #4b5563;
+      }
       code {
         background: #f1f5f9;
         padding: 2px 6px;
@@ -80,6 +125,10 @@
   <body>
     <div class="layout">
       <nav>
+        <div class="brand">
+          <img src="/static/assets/logo.svg" alt="PharmaAI" />
+          <span>PharmaAI</span>
+        </div>
         <h2>Navigation</h2>
         <a href="/">Console</a>
         <a href="/extraction">Extractions</a>
@@ -99,9 +148,34 @@
       <section>
         <h2>Adresse du connecteur Winpharma</h2>
         <p>
-          Le connecteur DataSnap est accessible sur
-          <code>http://&lt;IP&gt;:8001/datasnap/rest/TServerMethods1/%22query_thread_data%22/</code>.
+          Modifiez l'URL du connecteur (service extractor) utilisé pour lancer les extractions.
         </p>
+        <label for="connector-url">URL du connecteur</label>
+        <input
+          id="connector-url"
+          placeholder="http://127.0.0.1:8002"
+          autocomplete="off"
+        />
+        <div class="actions">
+          <button id="connector-save">Enregistrer</button>
+          <button id="connector-reload" class="secondary">Recharger</button>
+        </div>
+        <p class="status" id="connector-status">Aucune adresse chargée.</p>
+      </section>
+      <section>
+        <h2>Importation du catalogue de requêtes</h2>
+        <p style="margin: 0 0 8px">
+          Le fichier <code>docs/queries_catalog.md</code> est affiché ici et peut être modifié en direct.
+        </p>
+        <label for="catalog-content">Contenu du catalogue</label>
+        <textarea id="catalog-content" placeholder="Chargement du catalogue..."></textarea>
+        <div class="catalog-actions">
+          <button id="catalog-load" class="secondary">Recharger</button>
+          <button id="catalog-save">Enregistrer le fichier</button>
+          <button id="catalog-import" class="secondary">Importer vers la base</button>
+          <button id="catalog-export" class="secondary">Exporter depuis la base</button>
+        </div>
+        <p class="status" id="catalog-status">Catalogue non chargé.</p>
       </section>
       <section>
         <h2>Exemple de requête produit</h2>
@@ -133,5 +207,87 @@
         </main>
       </div>
     </div>
+    <script>
+      const connectorInput = document.getElementById("connector-url");
+      const connectorStatus = document.getElementById("connector-status");
+      const connectorSave = document.getElementById("connector-save");
+      const connectorReload = document.getElementById("connector-reload");
+      const catalogContent = document.getElementById("catalog-content");
+      const catalogStatus = document.getElementById("catalog-status");
+      const catalogLoad = document.getElementById("catalog-load");
+      const catalogSave = document.getElementById("catalog-save");
+      const catalogImport = document.getElementById("catalog-import");
+      const catalogExport = document.getElementById("catalog-export");
+
+      async function loadConnector() {
+        connectorStatus.textContent = "Chargement de l'adresse...";
+        const response = await fetch("/config/connector");
+        const data = await response.json();
+        connectorInput.value = data.url || "";
+        connectorStatus.textContent = data.url
+          ? `Adresse actuelle : ${data.url}`
+          : "Aucune adresse configurée.";
+      }
+
+      async function saveConnector() {
+        connectorStatus.textContent = "Enregistrement en cours...";
+        const response = await fetch("/config/connector", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: connectorInput.value.trim() }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          connectorStatus.textContent = data.detail || "Erreur lors de l'enregistrement.";
+          return;
+        }
+        connectorStatus.textContent = data.url
+          ? `Adresse enregistrée : ${data.url}`
+          : "Adresse enregistrée.";
+      }
+
+      async function loadCatalog() {
+        catalogStatus.textContent = "Chargement du catalogue...";
+        const response = await fetch("/queries/catalog");
+        const data = await response.json();
+        catalogContent.value = data.content || "";
+        catalogStatus.textContent = "Catalogue chargé.";
+      }
+
+      async function saveCatalog() {
+        catalogStatus.textContent = "Enregistrement du catalogue...";
+        await fetch("/queries/catalog", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: catalogContent.value }),
+        });
+        catalogStatus.textContent = "Catalogue enregistré.";
+      }
+
+      connectorSave.addEventListener("click", saveConnector);
+      connectorReload.addEventListener("click", loadConnector);
+
+      catalogLoad.addEventListener("click", loadCatalog);
+      catalogSave.addEventListener("click", saveCatalog);
+      catalogImport.addEventListener("click", async () => {
+        const confirmed = confirm(
+          "Importer le catalogue va remplacer toutes les requêtes enregistrées en base. Continuer ?"
+        );
+        if (!confirmed) return;
+        await saveCatalog();
+        const response = await fetch("/queries/catalog/import", { method: "POST" });
+        const data = await response.json();
+        catalogStatus.textContent = `Catalogue importé (${data.count ?? 0} requêtes).`;
+      });
+      catalogExport.addEventListener("click", async () => {
+        const response = await fetch("/queries/catalog/export", { method: "POST" });
+        const data = await response.json();
+        catalogContent.value = data.content || "";
+        catalogStatus.textContent = "Catalogue exporté depuis la base.";
+      });
+
+      loadConnector();
+      loadCatalog();
+    </script>
   </body>
 </html>
