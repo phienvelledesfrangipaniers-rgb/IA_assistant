@@ -205,6 +205,7 @@
         padding: 12px;
         min-height: 160px;
         background: #f8fafc;
+        position: relative;
       }
       .join-item {
         display: grid;
@@ -221,6 +222,12 @@
         align-items: center;
         justify-content: space-between;
         gap: 8px;
+      }
+      .join-item-header span {
+        max-width: 50px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       .join-columns {
         display: grid;
@@ -563,6 +570,7 @@
       let page = 1;
       let allTables = [];
       const joinTables = new Map();
+      const joinItems = new Map();
 
       function normalizeValue(value) {
         if (value === null || value === undefined) return "";
@@ -794,7 +802,7 @@
           const label = document.createElement("label");
           const checkbox = document.createElement("input");
           checkbox.type = "checkbox";
-          checkbox.checked = col.name !== "*";
+          checkbox.checked = false;
           checkbox.value = col.name === "*" ? "*" : `${table}.${col.name}`;
           checkbox.dataset.table = table;
           checkbox.dataset.column = col.name;
@@ -811,6 +819,7 @@
         const item = document.createElement("div");
         item.className = "join-item";
         item.dataset.table = table;
+        item.style.position = "absolute";
         const header = document.createElement("div");
         header.className = "join-item-header";
         const label = document.createElement("span");
@@ -820,6 +829,7 @@
         remove.textContent = "Retirer";
         remove.addEventListener("click", () => {
           joinTables.delete(table);
+          joinItems.delete(table);
           item.remove();
           updateAvailableColumns();
           filtersContainer.innerHTML = "";
@@ -834,6 +844,32 @@
         item.appendChild(header);
         item.appendChild(columnsBox);
         joinArea.appendChild(item);
+        joinItems.set(table, item);
+      }
+
+      function positionJoinItem(item, position) {
+        if (!position) return;
+        item.style.left = `${Math.max(0, position.x)}px`;
+        item.style.top = `${Math.max(0, position.y)}px`;
+      }
+
+      async function addJoinItem(table, position) {
+        if (joinTables.has(table)) {
+          const existing = joinItems.get(table);
+          if (existing) {
+            positionJoinItem(existing, position);
+          }
+          return;
+        }
+        const cols = await fetchColumns(table);
+        joinTables.set(table, cols);
+        updateAvailableColumns();
+        renderJoinItem(table, cols);
+        positionJoinItem(joinItems.get(table), position);
+        filtersContainer.innerHTML = "";
+        filtersContainer.appendChild(buildFilterRow());
+        sortContainer.innerHTML = "";
+        sortContainer.appendChild(buildSortRow());
       }
 
       async function addJoinItem(table) {
@@ -912,6 +948,7 @@
         });
         const data = await response.json();
         let cols = data.columns || [];
+        cols = [{ name: "*", data_type: "" }, ...cols.filter((col) => col.name !== "*")];
         if (!cols.length) {
           cols = [{ name: "*", data_type: "" }];
         }
@@ -1091,7 +1128,12 @@
         event.preventDefault();
         const table = event.dataTransfer.getData("text/plain");
         if (table) {
-          await addJoinItem(table);
+          const rect = joinArea.getBoundingClientRect();
+          const position = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          };
+          await addJoinItem(table, position);
           tableBadge.textContent = `Table active: ${table}`;
         }
       });
