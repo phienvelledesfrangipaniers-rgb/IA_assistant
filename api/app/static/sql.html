@@ -872,6 +872,20 @@
         sortContainer.appendChild(buildSortRow());
       }
 
+      async function addJoinItem(table) {
+        if (joinTables.has(table)) {
+          return;
+        }
+        const cols = await fetchColumns(table);
+        joinTables.set(table, cols);
+        updateAvailableColumns();
+        renderJoinItem(table, cols);
+        filtersContainer.innerHTML = "";
+        filtersContainer.appendChild(buildFilterRow());
+        sortContainer.innerHTML = "";
+        sortContainer.appendChild(buildSortRow());
+      }
+
       function buildQuery() {
         const table = getSelectedTable();
         if (!table) {
