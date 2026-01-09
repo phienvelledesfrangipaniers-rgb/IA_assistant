@@ -22,6 +22,7 @@ from .table_descriptions import (
     save_table_description,
 )
 from .query_catalog import (
+    catalog_entries_with_names,
     export_catalog_queries,
     import_catalog_queries,
     read_catalog_content,
@@ -36,6 +37,20 @@ rag_settings: RagSettings = load_rag_settings()
 static_dir = Path(__file__).parent / "static"
 if static_dir.exists():
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+
+@app.on_event("startup")
+def seed_catalog_queries() -> None:
+    try:
+        if list_queries():
+            return
+    except Exception:
+        return
+    try:
+        content = read_catalog_content()
+    except FileNotFoundError:
+        return
+    import_catalog_queries(content)
 
 
 class ExtractPayload(BaseModel):
@@ -407,16 +422,28 @@ def sql_table_descriptions_save(payload: TableDescriptionPayload) -> dict[str, A
 
 @app.get("/queries")
 def queries_list() -> dict[str, Any]:
-    return {"items": list_queries()}
-
-
-@app.get("/queries/{query_id}")
-def query_get(query_id: int) -> dict[str, Any]:
-    query = get_query(query_id)
-    if not query:
-        raise HTTPException(status_code=404, detail="Query not found")
-    return query
-
+    try:
+        return {"items": list_queries()}
+    except Exception:
+        try:
+            entries = catalog_entries_with_names(read_catalog_content())
+        except FileNotFoundError:
+            entries = []
+        items = []
+        for idx, entry in enumerate(entries, start=1):
+            items.append(
+                {
+                    "id": idx,
+                    "name": entry.get("name"),
+                    "description": entry.get("description"),
+                    "tags": entry.get("tags") or [],
+                    "sql_text": entry.get("sql_text"),
+                    "source": entry.get("source"),
+                    "created_at": None,
+                    "updated_at": None,
+                }
+            )
+        return {"items": items}
 
 @app.post("/queries")
 def query_create(payload: SavedQueryPayload) -> dict[str, Any]:
@@ -469,8 +496,12 @@ def queries_catalog_write(payload: CatalogPayload) -> dict[str, Any]:
 @app.post("/queries/catalog/import")
 def queries_catalog_import() -> dict[str, Any]:
     content = read_catalog_content()
-    entries = import_catalog_queries(content)
-    return {"status": "ok", "count": len(entries)}
+    try:
+        entries = import_catalog_queries(content)
+        return {"status": "ok", "count": len(entries)}
+    except Exception as exc:
+        entries = catalog_entries_with_names(content)
+        return {"status": "warning", "count": len(entries), "detail": str(exc)}
 
 
 @app.post("/queries/catalog/export")
@@ -479,6 +510,13 @@ def queries_catalog_export() -> dict[str, Any]:
     write_catalog_content(content)
     return {"status": "ok", "content": content}
 
+
+@app.get("/queries/{query_id}")
+def query_get(query_id: int) -> dict[str, Any]:
+    query = get_query(query_id)
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+    return query
 
 @app.post("/rag/ask")
 def rag_ask(payload: RagAskPayload) -> dict[str, Any]:
