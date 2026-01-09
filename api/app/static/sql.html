@@ -175,6 +175,12 @@
         max-height: 280px;
         overflow: auto;
       }
+      .tree-search {
+        margin-bottom: 8px;
+      }
+      .tree-search input {
+        width: 100%;
+      }
       .tree-group {
         margin-bottom: 10px;
       }
@@ -197,20 +203,92 @@
         border: 2px dashed #cbd5f5;
         border-radius: 12px;
         padding: 12px;
-        min-height: 160px;
+        min-height: 320px;
         background: #f8fafc;
+        position: relative;
       }
       .join-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
+        display: grid;
         gap: 8px;
-        padding: 6px 8px;
+        padding: 10px;
         border-radius: 8px;
         background: #fff;
         border: 1px solid #e2e8f0;
         margin-bottom: 8px;
         font-size: 13px;
+        max-width: 150px;
+        max-height: 280px;
+        overflow: auto;
+      }
+      .join-item-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+      .join-item-header span {
+        max-width: 150px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .join-columns {
+        display: grid;
+        gap: 6px;
+        padding-left: 4px;
+      }
+      .join-columns label {
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 6px;
+        font-size: 12px;
+        text-align: left;
+      }
+      .join-columns input[type="checkbox"] {
+        margin-top: 2px;
+      }
+      .excel-table-wrapper {
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+      }
+      .excel-table th,
+      .excel-table td {
+        border-right: 1px solid #e5e7eb;
+      }
+      .excel-table th:last-child,
+      .excel-table td:last-child {
+        border-right: none;
+      }
+      .excel-table thead th {
+        background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+        font-weight: 700;
+        border-bottom: 1px solid #cbd5f5;
+      }
+      .excel-table tbody tr:hover td {
+        background: #eff6ff;
+      }
+      .filter-row input {
+        border: 1px solid #cbd5f5;
+        border-radius: 6px;
+        padding: 4px 6px;
+        background: #fff;
+      }
+      .controls select,
+      .controls input,
+      .controls textarea {
+        border: 1px solid #cbd5f5;
+        border-radius: 8px;
+        background: #fff;
+      }
+      .controls .row-grid {
+        background: #f8fafc;
+        padding: 8px;
+        border-radius: 10px;
+        border: 1px solid #e2e8f0;
       }
       .badge {
         display: inline-flex;
@@ -327,10 +405,17 @@
           </div>
           <div style="margin-top: 16px">
             <h3 class="panel-title">Colonnes</h3>
-            <div id="sql-columns" class="field-list"></div>
+            <div id="sql-columns" class="field-list">
+              <p style="margin: 0; font-size: 12px; color: #64748b">
+                Faites glisser une table dans la zone de jointure pour afficher ses champs.
+              </p>
+            </div>
           </div>
           <div style="margin-top: 16px">
             <h3 class="panel-title">Tables (treeview)</h3>
+            <div class="tree-search">
+              <input id="table-search" placeholder="Rechercher une table..." />
+            </div>
             <div id="table-tree" class="treeview"></div>
           </div>
         </div>
@@ -415,8 +500,8 @@
             </div>
           </div>
           <p class="status" id="sql-status">En attente d'une requête.</p>
-          <div class="table-wrapper">
-            <table id="sql-table">
+          <div class="table-wrapper excel-table-wrapper">
+            <table id="sql-table" class="excel-table">
               <thead></thead>
               <tbody></tbody>
             </table>
@@ -463,6 +548,7 @@
       const refreshBtn = document.getElementById("sql-refresh");
       const tableBadge = document.getElementById("sql-table-badge");
       const tableTree = document.getElementById("table-tree");
+      const tableSearchInput = document.getElementById("table-search");
       const joinArea = document.getElementById("join-area");
       const tabs = document.querySelectorAll(".tab-button");
       const tabPanels = document.querySelectorAll(".tab-panel");
@@ -487,6 +573,10 @@
       let availableColumns = [];
       let columnFilters = {};
       let page = 1;
+      let allTables = [];
+      const joinTables = new Map();
+      const joinItems = new Map();
+      let dragState = null;
 
       function normalizeValue(value) {
         if (value === null || value === undefined) return "";
@@ -592,12 +682,19 @@
         wrapper.className = "row-grid";
 
         const columnSelect = document.createElement("select");
-        availableColumns.forEach((col) => {
+        if (availableColumns.length) {
+          availableColumns.forEach((col) => {
+            const option = document.createElement("option");
+            option.value = col.name;
+            option.textContent = col.name;
+            columnSelect.appendChild(option);
+          });
+        } else {
           const option = document.createElement("option");
-          option.value = col.name;
-          option.textContent = col.name;
+          option.value = "";
+          option.textContent = "Aucune colonne";
           columnSelect.appendChild(option);
-        });
+        }
 
         const operatorSelect = document.createElement("select");
         ["=", "!=", ">", ">=", "<", "<=", "LIKE"].forEach((op) => {
@@ -628,12 +725,19 @@
         wrapper.className = "row-grid";
 
         const columnSelect = document.createElement("select");
-        availableColumns.forEach((col) => {
+        if (availableColumns.length) {
+          availableColumns.forEach((col) => {
+            const option = document.createElement("option");
+            option.value = col.name;
+            option.textContent = col.name;
+            columnSelect.appendChild(option);
+          });
+        } else {
           const option = document.createElement("option");
-          option.value = col.name;
-          option.textContent = col.name;
+          option.value = "";
+          option.textContent = "Aucune colonne";
           columnSelect.appendChild(option);
-        });
+        }
 
         const directionSelect = document.createElement("select");
         ["ASC", "DESC"].forEach((dir) => {
@@ -658,29 +762,12 @@
         return wrapper;
       }
 
-      function renderColumns() {
-        columnsContainer.innerHTML = "";
-        availableColumns.forEach((col) => {
-          const label = document.createElement("label");
-          label.style.display = "flex";
-          label.style.gap = "6px";
-          label.style.alignItems = "flex-start";
-          const checkbox = document.createElement("input");
-          checkbox.type = "checkbox";
-          checkbox.value = col.name;
-          checkbox.checked = true;
-          label.appendChild(checkbox);
-          const text = document.createElement("span");
-          text.style.textAlign = "left";
-          text.textContent = col.data_type ? `${col.name} (${col.data_type})` : col.name;
-          label.appendChild(text);
-          columnsContainer.appendChild(label);
-        });
-      }
-
       function renderTableTree(tables) {
         tableTree.innerHTML = "";
-        if (!tables.length) {
+        const filteredTables = tables.filter((table) =>
+          table.toLowerCase().includes(tableSearchInput.value.trim().toLowerCase())
+        );
+        if (!filteredTables.length) {
           tableTree.textContent = "Aucune table disponible.";
           return;
         }
@@ -689,7 +776,7 @@
         const title = document.createElement("strong");
         title.textContent = "Tables";
         group.appendChild(title);
-        tables.forEach((table) => {
+        filteredTables.forEach((table) => {
           const item = document.createElement("div");
           item.className = "tree-item";
           item.textContent = table;
@@ -702,23 +789,125 @@
         tableTree.appendChild(group);
       }
 
-      function addJoinItem(table) {
+      function updateAvailableColumns() {
+        const merged = [];
+        joinTables.forEach((cols, table) => {
+          cols.forEach((col) => {
+            const name = col.name === "*" ? "*" : `${table}.${col.name}`;
+            merged.push({ name, data_type: col.data_type || "", table, column: col.name });
+          });
+        });
+        availableColumns = merged;
+      }
+
+      function renderJoinColumns(container, table, cols) {
+        container.innerHTML = "";
+        const columnsList = document.createElement("div");
+        columnsList.className = "join-columns";
+        cols.forEach((col) => {
+          const label = document.createElement("label");
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.checked = false;
+          checkbox.value = col.name === "*" ? "*" : `${table}.${col.name}`;
+          checkbox.dataset.table = table;
+          checkbox.dataset.column = col.name;
+          label.appendChild(checkbox);
+          const text = document.createElement("span");
+          text.textContent = col.data_type ? `${col.name} (${col.data_type})` : col.name;
+          label.appendChild(text);
+          columnsList.appendChild(label);
+        });
+        container.appendChild(columnsList);
+      }
+
+      function renderJoinItem(table, cols) {
         const item = document.createElement("div");
         item.className = "join-item";
+        item.dataset.table = table;
+        item.style.position = "absolute";
+        const header = document.createElement("div");
+        header.className = "join-item-header";
+        header.style.cursor = "move";
         const label = document.createElement("span");
         label.textContent = table;
         const remove = document.createElement("button");
         remove.className = "secondary";
         remove.textContent = "Retirer";
-        remove.addEventListener("click", () => item.remove());
-        item.appendChild(label);
-        item.appendChild(remove);
+        remove.addEventListener("click", () => {
+          joinTables.delete(table);
+          joinItems.delete(table);
+          item.remove();
+          updateAvailableColumns();
+          filtersContainer.innerHTML = "";
+          filtersContainer.appendChild(buildFilterRow());
+          sortContainer.innerHTML = "";
+          sortContainer.appendChild(buildSortRow());
+        });
+        header.appendChild(label);
+        header.appendChild(remove);
+        header.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          const rect = item.getBoundingClientRect();
+          const areaRect = joinArea.getBoundingClientRect();
+          dragState = {
+            item,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+            areaLeft: areaRect.left,
+            areaTop: areaRect.top,
+          };
+        });
+        const columnsBox = document.createElement("div");
+        renderJoinColumns(columnsBox, table, cols);
+        item.appendChild(header);
+        item.appendChild(columnsBox);
         joinArea.appendChild(item);
+        joinItems.set(table, item);
+      }
+
+      function clampJoinPosition(item, position) {
+        const maxLeft = Math.max(0, joinArea.clientWidth - item.offsetWidth);
+        const maxTop = Math.max(0, joinArea.clientHeight - item.offsetHeight);
+        return {
+          x: Math.min(Math.max(0, position.x), maxLeft),
+          y: Math.min(Math.max(0, position.y), maxTop),
+        };
+      }
+
+      function positionJoinItem(item, position) {
+        if (!position) return;
+        const clamped = clampJoinPosition(item, position);
+        item.style.left = `${clamped.x}px`;
+        item.style.top = `${clamped.y}px`;
+      }
+
+      async function addJoinItem(table, position) {
+        if (joinTables.has(table)) {
+          const existing = joinItems.get(table);
+          if (existing) {
+            positionJoinItem(existing, position);
+          }
+          return;
+        }
+        const cols = await fetchColumns(table);
+        joinTables.set(table, cols);
+        updateAvailableColumns();
+        renderJoinItem(table, cols);
+        positionJoinItem(joinItems.get(table), position);
+        filtersContainer.innerHTML = "";
+        filtersContainer.appendChild(buildFilterRow());
+        sortContainer.innerHTML = "";
+        sortContainer.appendChild(buildSortRow());
       }
 
       function buildQuery() {
         const table = getSelectedTable();
-        const selectedColumns = Array.from(columnsContainer.querySelectorAll("input[type='checkbox']"))
+        if (!table) {
+          return "";
+        }
+        const selectedColumns = Array.from(joinArea.querySelectorAll("input[type='checkbox']"))
           .filter((checkbox) => checkbox.checked)
           .map((checkbox) => checkbox.value);
         const cols = selectedColumns.length ? selectedColumns.join(", ") : "*";
@@ -761,10 +950,11 @@
         const response = await fetch(`/sql/tables?pharma_id=${encodeURIComponent(pharma)}`);
         const data = await response.json();
         tableBadge.textContent = data.tables?.length ? "Tables chargées" : "Aucune table";
-        renderTableTree(data.tables || []);
+        allTables = data.tables || [];
+        renderTableTree(allTables);
       }
 
-      async function loadColumns(table) {
+      async function fetchColumns(table) {
         const pharma = pharmaSelect.value;
         if (!pharma || !table) return;
         const response = await fetch("/sql/table_info", {
@@ -773,15 +963,12 @@
           body: JSON.stringify({ pharma_id: pharma, table }),
         });
         const data = await response.json();
-        availableColumns = data.columns || [];
-        if (!availableColumns.length) {
-          availableColumns = [{ name: "*", data_type: "" }];
+        let cols = data.columns || [];
+        cols = [{ name: "*", data_type: "" }, ...cols.filter((col) => col.name !== "*")];
+        if (!cols.length) {
+          cols = [{ name: "*", data_type: "" }];
         }
-        renderColumns();
-        filtersContainer.innerHTML = "";
-        filtersContainer.appendChild(buildFilterRow());
-        sortContainer.innerHTML = "";
-        sortContainer.appendChild(buildSortRow());
+        return cols;
       }
 
       function resetSavedQueryForm() {
@@ -806,8 +993,15 @@
       }
 
       async function loadSavedQueries() {
-        const response = await fetch("/queries");
-        const data = await response.json();
+        let response = await fetch("/queries");
+        let data = await response.json();
+        if (!data.items || data.items.length === 0) {
+          const importResponse = await fetch("/queries/catalog/import", { method: "POST" });
+          if (importResponse.ok) {
+            response = await fetch("/queries");
+            data = await response.json();
+          }
+        }
         savedQueries = data.items || [];
         savedQuerySelect.innerHTML = "<option value=\"\">-- Sélectionner --</option>";
         savedQueries.forEach((query) => {
@@ -953,22 +1147,40 @@
         event.preventDefault();
       });
 
-      joinArea.addEventListener("drop", (event) => {
+      joinArea.addEventListener("drop", async (event) => {
         event.preventDefault();
         const table = event.dataTransfer.getData("text/plain");
         if (table) {
-          addJoinItem(table);
+          const rect = joinArea.getBoundingClientRect();
+          const position = {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top,
+          };
+          await addJoinItem(table, position);
           tableBadge.textContent = `Table active: ${table}`;
-          loadColumns(table);
         }
       });
 
+      joinArea.addEventListener("pointermove", (event) => {
+        if (!dragState) return;
+        const position = {
+          x: event.clientX - dragState.areaLeft - dragState.offsetX,
+          y: event.clientY - dragState.areaTop - dragState.offsetY,
+        };
+        positionJoinItem(dragState.item, position);
+      });
+
+      joinArea.addEventListener("pointerup", () => {
+        dragState = null;
+      });
+
+      joinArea.addEventListener("pointerleave", () => {
+        dragState = null;
+      });
+
       function getSelectedTable() {
-        const items = joinArea.querySelectorAll(".join-item span");
-        if (!items.length) {
-          return "";
-        }
-        return items[items.length - 1].textContent;
+        const tables = Array.from(joinTables.keys());
+        return tables.length ? tables[tables.length - 1] : "";
       }
 
       tabs.forEach((tab) => {
@@ -992,6 +1204,10 @@
       pageSizeSelect.addEventListener("change", () => {
         page = 1;
         renderTable();
+      });
+
+      tableSearchInput.addEventListener("input", () => {
+        renderTableTree(allTables);
       });
 
       prevBtn.addEventListener("click", () => {
