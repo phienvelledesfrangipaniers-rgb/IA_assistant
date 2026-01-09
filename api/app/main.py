@@ -16,6 +16,11 @@ from .datasnap import DataSnapClient, DataSnapError
 from .db import check_connection
 from .kpi import get_purchase_changes, get_sales_kpi, get_stock_alerts
 from .rag.service import RagSettings, answer_question, index_folder, load_rag_settings
+from .table_descriptions import (
+    get_table_description,
+    list_table_descriptions,
+    save_table_description,
+)
 
 app = FastAPI(title="Assistant IA Pharmacie API")
 
@@ -49,6 +54,16 @@ class SqlQueryPayload(BaseModel):
 
 class EnvUpdatePayload(BaseModel):
     content: str
+
+
+class TableInfoPayload(BaseModel):
+    pharma_id: str
+    table: str
+
+
+class TableDescriptionPayload(BaseModel):
+    table: str
+    description: str
 
 
 @app.get("/")
@@ -198,6 +213,120 @@ def sql_query(payload: SqlQueryPayload) -> dict[str, Any]:
     except DataSnapError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     return {"pharma_id": payload.pharma_id, "result": response.result}
+
+
+def _select_results(result: Any) -> list[dict[str, Any]]:
+    if result is None:
+        return []
+    if isinstance(result, list):
+        return [row for row in result if isinstance(row, dict)]
+    if isinstance(result, dict):
+        return [result]
+    return []
+
+
+def _safe_identifier(value: str) -> str:
+    clean = value.strip()
+    if not clean.replace("_", "").isalnum():
+        raise HTTPException(status_code=400, detail="Invalid table identifier")
+    return clean
+
+
+def _fetch_tables(client: DataSnapClient) -> list[str]:
+    queries = [
+        "SELECT table_name FROM information_schema.tables WHERE table_type = 'BASE TABLE' ORDER BY table_name",
+        "SELECT name FROM sysobjects WHERE xtype = 'U' ORDER BY name",
+    ]
+    for query in queries:
+        response = client.call("query_thread", {"sql": query})
+        rows = _select_results(response.result)
+        if not rows:
+            continue
+        key = "table_name" if "table_name" in rows[0] else "name" if "name" in rows[0] else None
+        if not key:
+            continue
+        tables = [str(row.get(key)) for row in rows if row.get(key)]
+        if tables:
+            return tables
+    return []
+
+
+def _fetch_columns(client: DataSnapClient, table: str) -> list[dict[str, str]]:
+    safe_table = _safe_identifier(table)
+    queries = [
+        (
+            "SELECT column_name, data_type FROM information_schema.columns "
+            f"WHERE table_name = '{safe_table}' ORDER BY ordinal_position"
+        ),
+        (
+            "SELECT name AS column_name, type_name AS data_type "
+            "FROM syscolumns sc JOIN systypes st ON sc.xusertype = st.xusertype "
+            f"JOIN sysobjects so ON sc.id = so.id WHERE so.name = '{safe_table}' "
+            "ORDER BY sc.colid"
+        ),
+    ]
+    for query in queries:
+        response = client.call("query_thread", {"sql": query})
+        rows = _select_results(response.result)
+        if not rows:
+            continue
+        normalized: list[dict[str, str]] = []
+        for row in rows:
+            name = row.get("column_name") or row.get("name")
+            data_type = row.get("data_type") or row.get("type_name") or ""
+            if name:
+                normalized.append({"name": str(name), "data_type": str(data_type)})
+        if normalized:
+            return normalized
+    return []
+
+
+@app.get("/sql/pharmacies")
+def sql_pharmacies() -> dict[str, Any]:
+    hosts = get_pharmacy_hosts()
+    return {"items": sorted(hosts.keys())}
+
+
+@app.get("/sql/tables")
+def sql_tables(pharma_id: str = Query(...)) -> dict[str, Any]:
+    hosts = get_pharmacy_hosts()
+    host = hosts.get(pharma_id)
+    if not host:
+        raise HTTPException(status_code=404, detail="Unknown pharmacy")
+    client = DataSnapClient(host)
+    try:
+        tables = _fetch_tables(client)
+    except DataSnapError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"pharma_id": pharma_id, "tables": tables}
+
+
+@app.post("/sql/table_info")
+def sql_table_info(payload: TableInfoPayload) -> dict[str, Any]:
+    hosts = get_pharmacy_hosts()
+    host = hosts.get(payload.pharma_id)
+    if not host:
+        raise HTTPException(status_code=404, detail="Unknown pharmacy")
+    client = DataSnapClient(host)
+    try:
+        columns = _fetch_columns(client, payload.table)
+    except DataSnapError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    return {"pharma_id": payload.pharma_id, "table": payload.table, "columns": columns}
+
+
+@app.get("/sql/descriptions")
+def sql_table_descriptions(table: str | None = None) -> dict[str, Any]:
+    if table:
+        description = get_table_description(table)
+        return {"table": table, "description": description}
+    return {"items": list_table_descriptions()}
+
+
+@app.post("/sql/descriptions")
+def sql_table_descriptions_save(payload: TableDescriptionPayload) -> dict[str, Any]:
+    save_table_description(payload.table, payload.description)
+    return {"status": "ok"}
 
 
 @app.post("/rag/ask")

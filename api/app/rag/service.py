@@ -11,6 +11,7 @@ from pypdf import PdfReader
 
 from ..db import get_connection
 from ..kpi import build_kpi_summary
+from ..table_descriptions import list_table_descriptions
 from .embeddings import embed_text, vector_literal
 from .llm import LLMProvider, NoLLMProvider, OllamaProvider
 
@@ -130,7 +131,13 @@ def answer_question(
 ) -> dict[str, object]:
     sources = search_documents(pharma_id, question, settings)
     kpi_summary = build_kpi_summary(pharma_id, start, end)
-    prompt = f"Question: {question}\nKPI: {kpi_summary}\nSources: {sources}"
+    table_descriptions = list_table_descriptions()
+    prompt = (
+        f"Question: {question}\n"
+        f"KPI: {kpi_summary}\n"
+        f"Descriptions tables: {table_descriptions}\n"
+        f"Sources: {sources}"
+    )
     if isinstance(settings.llm_provider, NoLLMProvider):
         snippets = [
             source["content"][:300].replace("\n", " ").strip()
@@ -138,10 +145,20 @@ def answer_question(
             if source.get("content")
         ]
         snippet_text = "\n".join(f"- {snippet}" for snippet in snippets[:3]) or "- Aucun extrait trouvé."
+        table_summary = (
+            "\n".join(
+                f"- {table}: {desc}"
+                for table, desc in sorted(table_descriptions.items())
+                if desc
+            )
+            or "- Aucun descriptif de table."
+        )
         answer = (
             "Réponse basée sur les documents indexés et les KPI disponibles.\n"
             f"Question: {question}\n"
             f"Résumé KPI: {kpi_summary}\n"
+            "Descriptions de tables:\n"
+            f"{table_summary}\n"
             "Extraits principaux:\n"
             f"{snippet_text}"
         )

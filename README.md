@@ -30,6 +30,7 @@ Ouvrez `http://localhost:8000/` pour accéder à la console web (extraction, KPI
 La page de configuration est disponible sur `http://localhost:8000/config`.
 La page SQL (SELECT) est disponible sur `http://localhost:8000/sql`.
 La page d'édition du `.env` est disponible sur `http://localhost:8000/env` (redémarrez les autres services pour appliquer partout).
+Le SQL propose un générateur visuel (tables, colonnes, filtres) et un espace pour décrire les tables afin d'aider l'IA.
 Si `/sql` retourne `{"detail":"Not Found"}`, reconstruisez l'image API
 (`docker compose build api`) puis relancez le service (`docker compose up -d api`).
 
