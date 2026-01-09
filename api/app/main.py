@@ -21,6 +21,12 @@ from .table_descriptions import (
     list_table_descriptions,
     save_table_description,
 )
+from .query_catalog import (
+    export_catalog_queries,
+    import_catalog_queries,
+    read_catalog_content,
+    write_catalog_content,
+)
 from .query_store import create_query, delete_query, get_query, list_queries, update_query
 
 app = FastAPI(title="Assistant IA Pharmacie API")
@@ -73,6 +79,10 @@ class SavedQueryPayload(BaseModel):
     tags: list[str] | None = None
     sql_text: str
     source: str | None = None
+
+
+class CatalogPayload(BaseModel):
+    content: str
 
 
 @app.get("/")
@@ -442,6 +452,31 @@ def query_update(query_id: int, payload: SavedQueryPayload) -> dict[str, Any]:
 def query_delete(query_id: int) -> dict[str, Any]:
     delete_query(query_id)
     return {"status": "ok"}
+
+
+@app.get("/queries/catalog")
+def queries_catalog_read() -> dict[str, Any]:
+    return {"content": read_catalog_content()}
+
+
+@app.put("/queries/catalog")
+def queries_catalog_write(payload: CatalogPayload) -> dict[str, Any]:
+    write_catalog_content(payload.content)
+    return {"status": "ok"}
+
+
+@app.post("/queries/catalog/import")
+def queries_catalog_import() -> dict[str, Any]:
+    content = read_catalog_content()
+    entries = import_catalog_queries(content)
+    return {"status": "ok", "count": len(entries)}
+
+
+@app.post("/queries/catalog/export")
+def queries_catalog_export() -> dict[str, Any]:
+    content = export_catalog_queries()
+    write_catalog_content(content)
+    return {"status": "ok", "content": content}
 
 
 @app.post("/rag/ask")

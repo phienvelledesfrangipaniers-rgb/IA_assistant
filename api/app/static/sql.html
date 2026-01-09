@@ -112,8 +112,23 @@
       }
       .builder {
         display: grid;
-        grid-template-columns: 280px minmax(0, 1fr) 320px;
+        grid-template-columns: 280px minmax(0, 1fr);
         gap: 16px;
+      }
+      .builder-main {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .builder-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .catalog-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
       }
       .tabs {
         display: flex;
@@ -319,49 +334,65 @@
             <div id="table-tree" class="treeview"></div>
           </div>
         </div>
-        <div>
-          <h2 class="panel-title">Construction visuelle</h2>
-          <label for="sql-limit">Limite de lignes</label>
-          <input id="sql-limit" type="number" value="50" min="1" />
-          <div style="margin-top: 16px">
-            <strong>Zone de jointure</strong>
-            <div id="join-area" class="join-area">Glissez des tables ici pour préparer des jointures.</div>
+        <div class="builder-main">
+          <div class="builder-panel">
+            <h2 class="panel-title">Construction visuelle</h2>
+            <label for="sql-limit">Limite de lignes</label>
+            <input id="sql-limit" type="number" value="50" min="1" />
+            <div style="margin-top: 16px">
+              <strong>Zone de jointure</strong>
+              <div id="join-area" class="join-area">Glissez des tables ici pour préparer des jointures.</div>
+            </div>
+            <div style="margin-top: 16px">
+              <strong>Filtres</strong>
+              <div id="sql-filters" class="controls" style="margin-top: 8px"></div>
+              <button id="sql-add-filter" class="secondary" style="margin-top: 8px">
+                Ajouter un filtre
+              </button>
+            </div>
+            <div style="margin-top: 16px">
+              <strong>Tri</strong>
+              <div id="sql-sorts" class="controls" style="margin-top: 8px"></div>
+              <button id="sql-add-sort" class="secondary" style="margin-top: 8px">
+                Ajouter un tri
+              </button>
+            </div>
+            <div style="margin-top: 16px">
+              <strong>SQL généré</strong>
+              <div id="sql-preview" class="sql-preview">Aucune requête générée.</div>
+            </div>
           </div>
-          <div style="margin-top: 16px">
-            <strong>Filtres</strong>
-            <div id="sql-filters" class="controls" style="margin-top: 8px"></div>
-            <button id="sql-add-filter" class="secondary" style="margin-top: 8px">
-              Ajouter un filtre
-            </button>
+          <div class="builder-panel">
+            <h3 class="panel-title">Requêtes enregistrées</h3>
+            <label for="saved-query-select">Sélection</label>
+            <select id="saved-query-select"></select>
+            <label for="saved-query-name" style="margin-top: 12px">Nom</label>
+            <input id="saved-query-name" placeholder="Nom de la requête" />
+            <label for="saved-query-tags" style="margin-top: 12px">Tags</label>
+            <input id="saved-query-tags" placeholder="ex: orders, produit" />
+            <label for="saved-query-source" style="margin-top: 12px">Source</label>
+            <input id="saved-query-source" placeholder="cron.php" />
+            <label for="saved-query-description" style="margin-top: 12px">Description</label>
+            <textarea id="saved-query-description" rows="4" placeholder="Description fonctionnelle"></textarea>
+            <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap">
+              <button id="saved-query-new" class="secondary">Nouveau</button>
+              <button id="saved-query-save">Enregistrer</button>
+              <button id="saved-query-delete" class="secondary">Supprimer</button>
+            </div>
           </div>
-          <div style="margin-top: 16px">
-            <strong>Tri</strong>
-            <div id="sql-sorts" class="controls" style="margin-top: 8px"></div>
-            <button id="sql-add-sort" class="secondary" style="margin-top: 8px">
-              Ajouter un tri
-            </button>
-          </div>
-          <div style="margin-top: 16px">
-            <strong>SQL généré</strong>
-            <div id="sql-preview" class="sql-preview">Aucune requête générée.</div>
-          </div>
-        </div>
-        <div>
-          <h3 class="panel-title" style="margin-top: 16px">Requêtes enregistrées</h3>
-          <label for="saved-query-select">Sélection</label>
-          <select id="saved-query-select"></select>
-          <label for="saved-query-name" style="margin-top: 12px">Nom</label>
-          <input id="saved-query-name" placeholder="Nom de la requête" />
-          <label for="saved-query-tags" style="margin-top: 12px">Tags</label>
-          <input id="saved-query-tags" placeholder="ex: orders, produit" />
-          <label for="saved-query-source" style="margin-top: 12px">Source</label>
-          <input id="saved-query-source" placeholder="cron.php" />
-          <label for="saved-query-description" style="margin-top: 12px">Description</label>
-          <textarea id="saved-query-description" rows="4" placeholder="Description fonctionnelle"></textarea>
-          <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap">
-            <button id="saved-query-new" class="secondary">Nouveau</button>
-            <button id="saved-query-save">Enregistrer</button>
-            <button id="saved-query-delete" class="secondary">Supprimer</button>
+          <div class="builder-panel">
+            <h3 class="panel-title">Catalogue des requêtes pré-enregistrées</h3>
+            <p style="margin: 0; font-size: 13px; color: #4b5563">
+              Le fichier <code>docs/queries_catalog.md</code> est affiché ici et peut être modifié en direct.
+            </p>
+            <label for="catalog-content" style="margin-top: 8px">Contenu du catalogue</label>
+            <textarea id="catalog-content" rows="12" placeholder="Chargement du catalogue..."></textarea>
+            <div class="catalog-actions" style="margin-top: 8px">
+              <button id="catalog-load" class="secondary">Recharger</button>
+              <button id="catalog-save">Enregistrer le fichier</button>
+              <button id="catalog-import" class="secondary">Importer vers la base</button>
+              <button id="catalog-export" class="secondary">Exporter depuis la base</button>
+            </div>
           </div>
         </div>
           </div>
@@ -443,6 +474,11 @@
       const savedQuerySave = document.getElementById("saved-query-save");
       const savedQueryDelete = document.getElementById("saved-query-delete");
       const savedQueryNew = document.getElementById("saved-query-new");
+      const catalogContent = document.getElementById("catalog-content");
+      const catalogLoad = document.getElementById("catalog-load");
+      const catalogSave = document.getElementById("catalog-save");
+      const catalogImport = document.getElementById("catalog-import");
+      const catalogExport = document.getElementById("catalog-export");
       let savedQueries = [];
       let activeQueryId = null;
 
@@ -782,6 +818,20 @@
         });
       }
 
+      async function loadCatalog() {
+        const response = await fetch("/queries/catalog");
+        const data = await response.json();
+        catalogContent.value = data.content || "";
+      }
+
+      async function saveCatalog() {
+        await fetch("/queries/catalog", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content: catalogContent.value }),
+        });
+      }
+
       document.getElementById("sql-run").addEventListener("click", async () => {
         const pharma = pharmaSelect.value;
         const sql = queryInput.value;
@@ -862,6 +912,35 @@
         statusEl.textContent = "Requête supprimée.";
       });
 
+      catalogLoad.addEventListener("click", async () => {
+        await loadCatalog();
+        statusEl.textContent = "Catalogue rechargé.";
+      });
+
+      catalogSave.addEventListener("click", async () => {
+        await saveCatalog();
+        statusEl.textContent = "Catalogue enregistré.";
+      });
+
+      catalogImport.addEventListener("click", async () => {
+        const confirmed = confirm(
+          "Importer le catalogue va remplacer toutes les requêtes enregistrées en base. Continuer ?"
+        );
+        if (!confirmed) return;
+        await saveCatalog();
+        const response = await fetch("/queries/catalog/import", { method: "POST" });
+        const data = await response.json();
+        await loadSavedQueries();
+        statusEl.textContent = `Catalogue importé (${data.count ?? 0} requêtes).`;
+      });
+
+      catalogExport.addEventListener("click", async () => {
+        const response = await fetch("/queries/catalog/export", { method: "POST" });
+        const data = await response.json();
+        catalogContent.value = data.content || "";
+        statusEl.textContent = "Catalogue exporté depuis la base.";
+      });
+
       pharmaSelect.addEventListener("change", async () => {
         await loadTables();
       });
@@ -929,6 +1008,7 @@
         await loadPharmacies();
         await loadTables();
         await loadSavedQueries();
+        await loadCatalog();
         previewEl.textContent = "Générez une requête pour voir l'aperçu SQL.";
       })();
     </script>

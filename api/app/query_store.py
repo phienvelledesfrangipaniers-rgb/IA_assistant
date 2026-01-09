@@ -108,3 +108,26 @@ def delete_query(query_id: int) -> None:
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("DELETE FROM catalog.saved_queries WHERE id = %s", (query_id,))
+
+
+def replace_queries(queries: list[dict[str, Any]]) -> None:
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM catalog.saved_queries")
+            if queries:
+                cur.executemany(
+                    """
+                    INSERT INTO catalog.saved_queries (name, description, tags, sql_text, source)
+                    VALUES (%s, %s, %s, %s, %s)
+                    """,
+                    [
+                        (
+                            query.get("name"),
+                            query.get("description"),
+                            query.get("tags"),
+                            query.get("sql_text"),
+                            query.get("source"),
+                        )
+                        for query in queries
+                    ],
+                )
