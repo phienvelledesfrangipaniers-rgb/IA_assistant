@@ -1,0 +1,402 @@
+[
+  {
+    "descriptif": "CA mensuel du grossiste Pharmar sur l’année/mois courant. #COMGROS #FOURNIS",
+    "requete": "SELECT round(sum(montantTTCrecu)) as ca\n  FROM COMGROS as a\n  left join FOURNIS as c on a.code_fourn=c.code\n  where year(FROM_UNIXTIME(DTime_Send)) = year(now())\n    and month(FROM_UNIXTIME(DTime_Send)) = month(now())\n    and c.nom = \"pharmar\"",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Récupère TVA, stock et prix pour une liste d’EAN13 afin de synchroniser le stock/prix. #produit #COMGROIT #comgros",
+    "requete": "select TVA,ean13,convert(en_stock,char) as en_stock,prix_public,pahtnet\n  from produit as a\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    left join comgros as f on f.nocomgros = e.nocomgros\n    Where a.cip=e.cip\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and ean13 in (...)",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Liste des produits homéo (doses) pour synchronisation. #produit",
+    "requete": "SELECT nom,ean13 FROM produit WHERE nom like '%CH DO GL BOI' order by nom desc",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Liste des produits homéo (tubes) pour synchronisation. #produit",
+    "requete": "SELECT nom,ean13 FROM produit WHERE nom like '%CH TG BOI' order by nom desc",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Totaux de ventes par opérateur (toutes ventes). #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n  group by oper_code",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Totaux de ventes par opérateur (remboursement code 4). #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and a.Code_rembt = 4\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n  group by oper_code",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Totaux de ventes par opérateur sur une liste d’EAN13. #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)\n  group by oper_code",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "CA journalier pour une date donnée. #HISTORY",
+    "requete": "SELECT EspeceEUR, ChequeEUR, CB, (Centre+Mutuelle) as medoc, Virement,\n         (Differe_positif+EnCompte_positif+EnCompte_Negatif+Differe_Negatif) as encompte,\n         nb_De_Factures, (Marge_Rembt+Marge_NRembt) as marge\n  FROM HISTORY\n  WHERE date = \"<YYYY-MM-DD>\"",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Historique CA GPP sur période (statistiques). #HISTORY",
+    "requete": "SELECT DATE_FORMAT(date,\"%Y-%m-%d\") as date,(EspeceEUR) as esp_gpp,(ChequeEUR) as cheque_gpp,(CB) as cb_gpp,\n         ((Centre+Mutuelle)) as secu_gpp,((Differe_positif+EnCompte_positif+EnCompte_Negatif+EnCompte_Positif)) as encompte_gpp,\n         (nb_De_Factures) as client_gpp,((Marge_Rembt+Marge_NRembt)) as marge_gpp,\n         (EspeceEUR+ChequeEUR+CB+Centre+Mutuelle+Differe_positif+EnCompte_Positif+Differe_Negatif+EnCompte_Negatif+Virement) as ca_gpp\n  FROM HISTORY\n  WHERE date BETWEEN (\"2013-07-25\") AND (\"<YYYY-MM-DD>\")",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Historique CA Frang sur période (statistiques). #HISTORY",
+    "requete": "SELECT DATE_FORMAT(date,\"%Y-%m-%d\") as date,(EspeceEUR) as esp_frang,(ChequeEUR) as cheque_frang,(CB) as cb_frang,\n         ((Centre+Mutuelle)) as secu_frang,((Differe_positif+EnCompte_positif+EnCompte_Negatif+EnCompte_Positif)) as encompte_frang,\n         convert(nb_De_Factures,char) as client_frang,((Marge_Rembt+Marge_NRembt)) as marge_frang,\n         (EspeceEUR+ChequeEUR+CB+Centre+Mutuelle+Differe_positif+Differe_Negatif+EnCompte_Negatif+EnCompte_Positif+Virement) as ca_frang\n  FROM HISTORY\n  WHERE date BETWEEN (\"2013-07-25\") AND (\"<YYYY-MM-DD>\")",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "CA web journalier (règlement type \"w\"). #REGORD #ORDERS",
+    "requete": "Select Date_Format(ORDERS.Date_order, \"%Y-%m-%d\") As order_date,Sum((ORDERS.Total_general)) As web\n  From REGORD\n  Left Join ORDERS On REGORD.Order_TI = ORDERS.TI\n  Where REGORD.RegleType = \"w\"\n    and Date_Format(ORDERS.Date_order, \"%Y-%m-%d\") BETWEEN (\"2013-07-25\") AND (\"<YYYY-MM-DD>\")\n  Group By Date_Format(ORDERS.Date_order, \"%Y-%m-%d\")",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: compter les produits. #produit",
+    "requete": "SELECT count(*) as total FROM produit",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: page de produits. #produit",
+    "requete": "SELECT * FROM produit limit <offset>,10000",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: compter MQ_form. #MQ_form",
+    "requete": "SELECT count(*) as total FROM MQ_form",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: page MQ_form. #MQ_form",
+    "requete": "SELECT * FROM MQ_form limit <offset>,10000",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: compter MQ_monog. #MQ_monog",
+    "requete": "SELECT count(*) as total FROM MQ_monog",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: page MQ_monog. #MQ_monog",
+    "requete": "SELECT * FROM MQ_monog limit <offset>,10000",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: compter MQ_memo. #MQ_memo",
+    "requete": "SELECT count(*) as total FROM MQ_memo",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: page MQ_memo. #MQ_memo",
+    "requete": "SELECT * FROM MQ_memo limit <offset>,10000",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: compter MQ_COMMN. #MQ_COMMN",
+    "requete": "SELECT count(*) as total FROM MQ_COMMN",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: page MQ_COMMN. #MQ_COMMN",
+    "requete": "SELECT * FROM MQ_COMMN limit <offset>,10000",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: compter BLOBS. #BLOBS",
+    "requete": "SELECT count(*) as total FROM BLOBS",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Export par lots: page BLOBS. #BLOBS",
+    "requete": "SELECT * FROM BLOBS limit <offset>,10000",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Extraction pour comparaison de prix (diff_prix). #PRODUIT #COMGROIT #comgros",
+    "requete": "SELECT a.cip as cip,a.ean13 as ean13,nom,prix_public,base_rembt, b.pahtnet as pahtnet,\n         (prix_public / pahtnet) as coeff,en_stock , DTlivraisonreel\n  FROM PRODUIT as a\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    left join comgros as f on f.nocomgros = e.nocomgros\n    Where a.cip=e.cip\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and code_rembt in (4)\n  and wflag & 8192 = 0\n  and en_stock>0",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Vérification d’un CIP avant mise à jour de prix. #produit",
+    "requete": "select cip from produit where cip = <cip>",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Dernière livraison par client (liste de cli_ti). #ORDERS",
+    "requete": "Select ORDERS.Cli_TI, MAX(ORDERS.Date_order) AS derniere_facture\n  From ORDERS\n  Where ORDERS.Cli_TI IN ('...')\n  Group By ORDERS.Cli_TI",
+    "fichier": "cron.php"
+  },
+  {
+    "descriptif": "Ventes promo par opérateur sur des EAN13 ciblés. #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE ean13 in (\"3664798027419\",\"3664798028195\",\"3664798027914\",\"3664798027556\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n  group by facture",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Palmares par opérateur (code subro / rembt / ean13 filtre). #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro in (\"AT\",\"FPAY\",\"FSEI\",\"FSES\")\n    and Code_fourn <> 1018\n    and c.code_rembt in (4)\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 <> \"1234567890123\"\n    and order_ti in (\n      SELECT order_ti FROM ORDitem as a left join produit as b on a.cip=b.cip WHERE b.ean13=\"1234567890123\"\n    )\n  group by Facture",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Détail palmarès avec quantités, nom, prix. #orders #orditem #produit",
+    "requete": "SELECT date_order,Facture, sum(convert(quantite,char)) as quantite ,nom, Prix_public\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro in (\"AT\",\"FPAY\",\"FSEI\",\"FSES\")\n    and Code_fourn <> 1018\n    and c.code_rembt in (4)\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 <> \"1234567890123\"\n    and order_ti in (\n      SELECT order_ti FROM ORDitem as a left join produit as b on a.cip=b.cip WHERE b.ean13=\"1234567890123\"\n    )\n  group by nom",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Liste des promotions actives. #PROMO #PROMITEM #produit",
+    "requete": "SELECT *\n  FROM PROMO as a\n  left join PROMITEM as b on a.TI=b.HeaderTI\n  left join produit as c on b.itemti=c.cip\n  where a.nom not like '%@%'\n    and a.Flags & 0x2 = 2\n  order by a.ti desc",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "CA grossistes (soredip/sipr/pharmar). #COMGROS #FOURNIS",
+    "requete": "SELECT c.nom as fourn,year(FROM_UNIXTIME(DTime_Send)) as year,month(FROM_UNIXTIME(DTime_Send)) as month,\n         round(sum(montantTTCrecu)) as ca\n  FROM COMGROS as a\n  left join FOURNIS as c on a.code_fourn=c.code\n  where year(FROM_UNIXTIME(DTime_Send)) IN (2022)\n    and c.nom in ('soredip','sipr','pharmar')\n  group by month(FROM_UNIXTIME(DTime_Send)),code_fourn\n  order by year(FROM_UNIXTIME(DTime_Send)),month(FROM_UNIXTIME(DTime_Send)),round(sum(montantTTCrecu)) desc",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Fournisseurs actifs (commandes). #fournis",
+    "requete": "select * from fournis where flags & 0x64<>64 and flags & 0x8<>8",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Vérification d’un CIP avant mise à jour de prix. #produit",
+    "requete": "select cip from produit where cip = <cip>",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Extraction pour comparaison de prix (diff_prix). #PRODUIT #COMGROIT #comgros",
+    "requete": "SELECT a.cip as cip,a.ean13 as ean13,nom,prix_public,base_rembt, b.pahtnet as pahtnet,\n         (prix_public / pahtnet) as coeff,en_stock , DTlivraisonreel\n  FROM PRODUIT as a\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    left join comgros as f on f.nocomgros = e.nocomgros\n    Where a.cip=e.cip\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and code_rembt in (4)\n  and wflag & 8192 = 0\n  and en_stock>0",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Stock/prix Winpharma pour EAN13 du site (maj_stock_wp_2 & maj_stock_wp). #produit #COMGROIT #comgros",
+    "requete": "select TVA,ean13,convert(en_stock,char) as en_stock,prix_public,pahtnet\n  from produit as a\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    left join comgros as f on f.nocomgros = e.nocomgros\n    Where a.cip=e.cip\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and ean13 in (...)",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Liste de produits “panier” (codeacte=16). #PRODUIT #COMGROIT #comgros",
+    "requete": "SELECT a.cip,nom,prix_public,base_rembt, pahtnet, (prix_public / pahtnet) as coeff,en_stock , DTlivraisonreel\n  FROM PRODUIT as a\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    left join comgros as f on f.nocomgros = e.nocomgros\n    Where a.cip=e.cip\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and a.codeacte=16\n  and en_stock>0\n  and prix_public/pahtnet<1.1",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Extraction stock pour rétrocession Frang. #PRODUIT #stprod #COMGROIT #comgros #FOURNIS",
+    "requete": "SELECT a.cip,a.nom, pahtnet, (prix_public / pahtnet) as coeff,Prix_Public,Dernier_Vente,\n         case when ean13 = \"\" then a.cip else ean13 end as ean13,\n         convert(en_stock,char) as en_stock,lastmonth,v1,v2,v3,\n         case when wflag & 0x2 = 2 then 1 else 0 end as commande,\n         case when (( en_stock > 0 ) ) then 1 else 0 end as tenu,\n         (case when (round(datediff(curdate(),\"1980-01-01\")/30.47) - lastmonth) = 0 then (v1+...+v12)/12\n               ...\n               else 0 end) as moyenne,\n         c.Code_Fourn as fournisseur\n  FROM PRODUIT as a\n  left join stprod on a.cip = stprod.cip\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    LEFT JOIN comgros as f on f.nocomgros = e.nocomgros\n    LEFT JOIN FOURNIS as g ON f.Code_Fourn = g.code\n    WHERE g.Code <> \"000002\" and g.Code <> \"261218\" and a.cip=e.cip and pahtnet<> 0\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and code_rembt in (4)\n  and wflag & 8192 = 0\n  and lastmonth <> \"\"",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Extraction stock pour rétrocession GPP. #PRODUIT #stprod #COMGROIT #comgros #FOURNIS",
+    "requete": "SELECT a.cip,a.nom, pahtnet, (prix_public / pahtnet) as coeff,Prix_Public,Dernier_Vente,\n         case when ean13 = \"\" then a.cip else ean13 end as ean13,\n         convert(en_stock,char) as en_stock,lastmonth,v1,v2,v3,\n         case when wflag & 0x2 = 2 then 1 else 0 end as commande,\n         case when (( en_stock > 0 ) ) then 1 else 0 end as tenu,\n         (case when (round(datediff(curdate(),\"1980-01-01\")/30.47) - lastmonth) = 0 then (v1+...+v12)/12\n               ...\n               else 0 end) as moyenne,\n         c.Code_Fourn as fournisseur\n  FROM PRODUIT as a\n  left join stprod on a.cip = stprod.cip\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    LEFT JOIN comgros as f on f.nocomgros = e.nocomgros\n    LEFT JOIN FOURNIS as g ON f.Code_Fourn = g.code\n    WHERE g.Code <> \"000002\" and g.Code <> \"261218\" and a.cip=e.cip and pahtnet<> 0\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and code_rembt in (4)\n  and wflag & 8192 = 0\n  order by en_stock desc",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Extraction stock pour rétrocession BIGPARA. #PRODUIT #stprod #COMGROIT #comgros #FOURNIS",
+    "requete": "SELECT a.cip,a.nom, pahtnet, (prix_public / pahtnet) as coeff,Prix_Public,Dernier_Vente,\n         case when ean13 = \"\" then a.cip else ean13 end as ean13,\n         convert(en_stock,char) as en_stock,lastmonth,v1,v2,v3,\n         case when wflag & 0x2 = 2 then 1 else 0 end as commande,\n         case when (( en_stock > 0 ) ) then 1 else 0 end as tenu,\n         (case when (round(datediff(curdate(),\"1980-01-01\")/30.47) - lastmonth) = 0 then (v1+...+v12)/12\n               ...\n               else 0 end) as moyenne,\n         c.Code_Fourn as fournisseur\n  FROM PRODUIT as a\n  left join stprod on a.cip = stprod.cip\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    LEFT JOIN comgros as f on f.nocomgros = e.nocomgros\n    LEFT JOIN FOURNIS as g ON f.Code_Fourn = g.code\n    WHERE g.Code <> \"000002\" and g.Code <> \"261218\" and a.cip=e.cip and pahtnet<> 0\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and code_rembt in (4)\n  and wflag & 8192 = 0\n  order by en_stock desc",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Libellé de fournisseur (conversion). #fournis",
+    "requete": "SELECT Code,Nom FROM fournis where Code = '<code>'",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Informations d’un produit par EAN13. #produit #stprod",
+    "requete": "SELECT *,convert(en_stock,char) as en_stock,\n         round(datediff(curdate(),\"1980-01-01\")/30.47) - lastmonth as depart\n  FROM produit as a\n  left join stprod as b on a.cip = b.cip\n  WHERE a.ean13 = \"<ean13>\"\n  order by en_stock desc",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Recherche produit par nom (autocomplete). #produit",
+    "requete": "SELECT Nom,ean13 FROM produit WHERE en_stock > 0 and Nom like \"<nom>%\" order by nom desc",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Liste de produits (filtres labo/stock/oubli), avec jointures dynamiques. #produit #MQ_FORM #comgroit #COMGROS #fournis",
+    "requete": "SELECT * FROM produit as a <join dynamiques> WHERE <filtres> order by en_stock desc",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Liste des fournisseurs (gpp). #FOURNIS",
+    "requete": "SELECT code,nom FROM FOURNIS",
+    "fichier": "class/bd_win.php"
+  },
+  {
+    "descriptif": "Produits à stock faible avec moyenne et délai réappro. #produit #stprod #COMHISTO #comgros #fournis",
+    "requete": "Select produit.CIP, produit.Nom, produit.EAN13, produit.Dernier_Vente,\n         (Case ... End) As moyenne,\n         produit.En_stock, comgros.DT_Livraison, fournis.Nom As Nom1, fournis.Delai_Reappro\n  From produit\n  Inner Join stprod On stprod.CIP = produit.CIP\n  Inner Join COMHISTO On COMHISTO.Pro_CIP = produit.CIP\n  Inner Join comgros On comgros.NoComGros = COMHISTO.NoComGros\n  Inner Join fournis On fournis.Code = comgros.Code_Fourn\n  Where produit.En_stock > 0\n    And produit.En_stock < (((Case ... End)/30)*(fournis.Delai_Reappro/10))\n    And (Select COMHISTO.NoComGros From COMHISTO Where produit.CIP = COMHISTO.Pro_CIP Order By COMHISTO.NoComGros Desc Limit 1) = COMHISTO.NoComGros\n  group by COMHISTO.NoComGros",
+    "fichier": "html/stock_faible/index.php"
+  },
+  {
+    "descriptif": "Détail des ventes pour une date (kote santé). #orders #orditem #produit #memores",
+    "requete": "SELECT a.facture,date_order,oper_code,(convert(quantite,char)) as quantite ,b.cip,c.nom,b.prix,memo\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  left join memores as d on (b.memo_ti=d.ti and d.TBLN=7)\n  WHERE a.code_subro in (\"AT\",\"FPAY\",\"FSEI\",\"FSES\")\n    and Code_fourn <> 1018\n    and c.code_rembt in (4)\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 <> \"1234567890123\"\n    and order_ti in (\n      SELECT order_ti FROM ORDitem as a left join produit as b on a.cip=b.cip WHERE b.ean13=\"1234567890123\"\n    )\n  order by a.facture DESC",
+    "fichier": "html/vente_kote_sante/index.php"
+  },
+  {
+    "descriptif": "CA grossistes sur 3 ans (frang/gpp). #COMGROS #FOURNIS",
+    "requete": "SELECT c.nom as fourn,year(FROM_UNIXTIME(DTime_Send)) as year,month(FROM_UNIXTIME(DTime_Send)) as month,\n         round(sum(montantTTCrecu)) as ca\n  FROM COMGROS as a\n  left join FOURNIS as c on a.code_fourn=c.code\n  WHERE DTime_Send >= UNIX_TIMESTAMP(DATE_SUB(CURDATE(), INTERVAL 3 YEAR))\n    and c.nom in ('soredip','sipr','pharmar')\n  group by c.nom,YEAR(FROM_UNIXTIME(a.DTime_Send)), MONTH(FROM_UNIXTIME(a.DTime_Send))\n  order by year(FROM_UNIXTIME(DTime_Send)),month(FROM_UNIXTIME(DTime_Send)),round(sum(montantTTCrecu)) desc",
+    "fichier": "html/ca_grossiste/index.php"
+  },
+  {
+    "descriptif": "Recherche produit par EAN13 (palmarès). #produit",
+    "requete": "SELECT Nom,ean13,en_stock FROM produit WHERE ean13=\"<search>\" order by nom desc",
+    "fichier": "html/palmares/action.php"
+  },
+  {
+    "descriptif": "Recherche produit par nom (palmarès). #produit",
+    "requete": "SELECT Nom,ean13,en_stock FROM produit WHERE Nom like (\"%<search>%\") and en_stock>0 order by nom desc",
+    "fichier": "html/palmares/action.php"
+  },
+  {
+    "descriptif": "Recherche produit par EAN13 (récap heures supp). #produit",
+    "requete": "SELECT Nom,ean13,en_stock FROM produit WHERE ean13=\"<search>\" order by nom desc",
+    "fichier": "html/Recap_heure_Supp/action.php"
+  },
+  {
+    "descriptif": "Recherche produit par nom (récap heures supp). #produit",
+    "requete": "SELECT Nom,ean13,en_stock FROM produit WHERE Nom like (\"%<search>%\") and en_stock>0 order by nom desc",
+    "fichier": "html/Recap_heure_Supp/action.php"
+  },
+  {
+    "descriptif": "Recherche produit par EAN13 (f_eval). #produit",
+    "requete": "SELECT Nom,ean13,en_stock FROM produit WHERE ean13=\"<search>\" order by nom desc",
+    "fichier": "html/f_eval/action.php"
+  },
+  {
+    "descriptif": "Recherche produit par nom (f_eval). #produit",
+    "requete": "SELECT Nom,ean13,en_stock FROM produit WHERE Nom like (\"%<search>%\") and en_stock>0 order by nom desc",
+    "fichier": "html/f_eval/action.php"
+  },
+  {
+    "descriptif": "Détail palmarès GPP (EAN13 ciblés). #orders #orditem #produit",
+    "requete": "SELECT date_order,Facture, (convert(quantite,char)) as quantite ,nom, Prix_public\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)",
+    "fichier": "html/palmares/index.php"
+  },
+  {
+    "descriptif": "Détail palmarès Frang (EAN13 ciblés). #orders #orditem #produit",
+    "requete": "SELECT date_order,Facture, (convert(quantite,char)) as quantite ,nom, Prix_public\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)",
+    "fichier": "html/palmares/index.php"
+  },
+  {
+    "descriptif": "Totaux de ventes par opérateur (boîtes). #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n  group by oper_code",
+    "fichier": "html/palmares/index.php"
+  },
+  {
+    "descriptif": "Totaux de ventes par opérateur (boîtes rembt 4). #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and a.Code_rembt = 4\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n  group by oper_code",
+    "fichier": "html/palmares/index.php"
+  },
+  {
+    "descriptif": "Totaux de ventes par opérateur (EAN13 ciblés GPP). #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)\n  group by oper_code",
+    "fichier": "html/palmares/index.php"
+  },
+  {
+    "descriptif": "Totaux de ventes par opérateur (EAN13 ciblés Frang). #orders #orditem #produit",
+    "requete": "SELECT oper_code,sum(convert(quantite,char)) as quantite\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)\n  group by oper_code",
+    "fichier": "html/palmares/index.php"
+  },
+  {
+    "descriptif": "Récupération du Cli_TI à partir d’une facture. #ORDERS",
+    "requete": "Select ORDERS.Facture, ORDERS.Cli_TI From ORDERS Where ORDERS.Facture = '<facture>'",
+    "fichier": "html/plan_livraison/action.php"
+  },
+  {
+    "descriptif": "Historique des achats d’un client (Cli_TI). #ORDERS #ORDITEM #produit",
+    "requete": "Select ORDERS.Facture, ORDERS.Cli_TI, ORDITEM.CIP, ORDITEM.Quantite, produit.Nom, ORDERS.Date_order\n  From ORDERS\n  Inner Join ORDITEM On ORDITEM.Order_TI = ORDERS.TI\n  Inner Join produit On produit.CIP = ORDITEM.CIP\n  Where ORDERS.Cli_TI = '<cli_ti>'\n  Order By ORDERS.Facture DESC, ORDERS.Date_order DESC",
+    "fichier": "html/plan_livraison/action.php"
+  },
+  {
+    "descriptif": "Historique achats client (vue). #ORDERS #ORDITEM #produit",
+    "requete": "Select ORDERS.Facture, ORDERS.Cli_TI, ORDITEM.CIP, ORDITEM.Quantite, produit.Nom, ORDERS.Date_order\n  From ORDERS\n  Inner Join ORDITEM On ORDITEM.Order_TI = ORDERS.TI\n  Inner Join produit On produit.CIP = ORDITEM.CIP\n  Where ORDERS.Cli_TI = '<cli_ti>'\n  Order By ORDERS.Facture DESC, ORDERS.Date_order DESC",
+    "fichier": "html/plan_livraison/view/clients.php"
+  },
+  {
+    "descriptif": "Monographie produit (texte via MQ_memo/BLOBS). #produit #MQ_form #MQ_monog #MQ_memo #BLOBS",
+    "requete": "Select a.cip,ean13,a.nom,liste,Gross,allait,\n    case when c.poso > 1000000000 then (select Str from MQ_memo where Ti=c.poso) else (select offset from BLOBS where Ti=c.poso) end as poso,\n    case when c.pharmacol > 1000000000 then (select Str from MQ_memo where Ti=c.pharmacol) else (select offset from BLOBS where Ti=c.pharmacol) end as pharmacol,\n    case when c.cinetique > 1000000000 then (select Str from MQ_memo where Ti=c.cinetique) else (select offset from BLOBS where Ti=c.cinetique) end as cinetique,\n    case when c.surdosage > 1000000000 then (select Str from MQ_memo where Ti=c.surdosage) else (select offset from BLOBS where Ti=c.surdosage) end as surdosage,\n    case when c.effets_ad > 1000000000 then (select Str from MQ_memo where Ti=c.effets_ad) else (select offset from BLOBS where Ti=c.effets_ad) end as effets_ad,\n    case when c.grouparis > 1000000000 then (select Str from MQ_memo where Ti=c.grouparis) else (select offset from BLOBS where Ti=c.grouparis) end as grouparis,\n    case when c.misengard > 1000000000 then (select Str from MQ_memo where Ti=c.misengard) else (select offset from BLOBS where Ti=c.misengard) end as misengard,\n    case when c.indicat > 1000000000 then (select Str from MQ_memo where Ti=c.indicat) else (select offset from BLOBS where Ti=c.indicat) end as indicat\n  from produit as a\n  left join MQ_form as b on a.cip = b.cip\n  LEFT JOIN MQ_monog as c on b.RefMon = c.RefMon\n  WHERE ean13 = <ean13>",
+    "fichier": "html/injection_produit/action.php"
+  },
+  {
+    "descriptif": "Alertes associées à un CIP. #MQ_ALERT #mq_commn",
+    "requete": "SELECT Str\n  FROM MQ_ALERT as a\n  left join mq_commn as b on a.codsp=b.keyval\n  where a.cip = <cip>",
+    "fichier": "html/injection_produit/action.php"
+  },
+  {
+    "descriptif": "Liste produits pour injection (filtres dynamiques). #produit #MQ_FORM #comgroit #COMGROS #fournis #FORMES",
+    "requete": "SELECT * FROM produit as a <join dynamiques> WHERE <filtres> order by a.nom desc",
+    "fichier": "html/injection_produit/index.php"
+  },
+  {
+    "descriptif": "CA MAD (fauteuils, déambulateurs, etc.). #ORDERS #ORDITEM #produit #COMGROIT #COMGROS",
+    "requete": "Select Year(date_order) As Annee, Month(date_order) As Mois, ...\n  From ORDERS As a\n  Left Join ORDITEM As b On a.ti = b.order_ti\n  Left Join produit As c On c.cip = b.cip\n  Left Join COMGROIT As d On c.cip = d.cip\n  Left Join COMGROS As e On d.nocomgros = e.nocomgros\n  Where d.nocomgros = (...)\n    and a.code_subro Not In ('RETF')\n    and (Nom Like '%fauteuil%' Or ...)\n    and a.Flags2 & 4096 = 0 and a.Flags2 & 2048 = 0\n  Group By Year(date_order), Month(date_order), nom",
+    "fichier": "html/ca_mad/index.php"
+  },
+  {
+    "descriptif": "CA mensuel par labos hors exclusions. #COMGROS #FOURNIS",
+    "requete": "SELECT month(FROM_UNIXTIME(DTime_Send)) as month, round(sum(montantTTCrecu)) as ca\n  FROM COMGROS as a\n  LEFT JOIN FOURNIS as c on a.code_fourn=c.code\n  WHERE year(FROM_UNIXTIME(DTime_Send)) = <année>\n    AND LOWER(c.nom) NOT IN (<liste>)\n  GROUP BY month(FROM_UNIXTIME(DTime_Send))\n  ORDER BY month(FROM_UNIXTIME(DTime_Send))",
+    "fichier": "html/ca_laboratoire/index.php"
+  },
+  {
+    "descriptif": "CA total par labo (hors exclusions). #COMGROS #FOURNIS",
+    "requete": "SELECT c.nom as fourn, round(sum(montantTTCrecu)) as ca\n  FROM COMGROS as a\n  LEFT JOIN FOURNIS as c on a.code_fourn=c.code\n  WHERE year(FROM_UNIXTIME(DTime_Send)) = <année>\n    AND LOWER(c.nom) NOT IN (<liste>)\n  GROUP BY code_fourn\n  ORDER BY ca DESC",
+    "fichier": "html/ca_laboratoire/index.php"
+  },
+  {
+    "descriptif": "Produits codeacte=16 (génériques). #PRODUIT #COMGROIT #comgros",
+    "requete": "SELECT a.cip,a.ean13,nom,prix_public,base_rembt, pahtnet, (prix_public / pahtnet) as coeff,en_stock , DTlivraisonreel\n  FROM PRODUIT as a\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    left join comgros as f on f.nocomgros = e.nocomgros\n    Where a.cip=e.cip\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and a.codeacte=16\n  and en_stock>0\n  and prix_public/pahtnet<1.2",
+    "fichier": "html/generique/index.php"
+  },
+  {
+    "descriptif": "Produits codeacte=16 (pan). #PRODUIT #COMGROIT #comgros",
+    "requete": "SELECT a.cip,a.ean13,nom,prix_public,base_rembt, pahtnet, (prix_public / pahtnet) as coeff,en_stock , DTlivraisonreel\n  FROM PRODUIT as a\n  left join COMGROIT as b on a.cip = b.cip\n  left join comgros as c on b.nocomgros = c.nocomgros\n  WHERE b.nocomgros = (\n    SELECT e.nocomgros\n    FROM COMGROIT as e\n    left join comgros as f on f.nocomgros = e.nocomgros\n    Where a.cip=e.cip\n    order by DTlivraisonreel desc\n    limit 1\n  )\n  and a.codeacte=16\n  and en_stock>0\n  and prix_public/pahtnet<1.2",
+    "fichier": "html/pan/index.php"
+  },
+  {
+    "descriptif": "CA par médecin (date du jour). #ORDERS #MEDECIN",
+    "requete": "Select (round(Sum(a.Total_general))) , a.Med_TI, a.Facture, b.No_Ident\n  From ORDERS As a\n  Left Join MEDECIN As b On b.Code = a.Med_TI\n  Where a.Date_order = Date_Format(Now(), '%Y/%m/%d') And b.No_Ident <> ''\n  Group By a.Med_TI\n  order by (round(Sum(a.Total_general))) desc",
+    "fichier": "html/ca_medecin/index.php"
+  },
+  {
+    "descriptif": "Détail palmarès GPP (EAN13 ciblés). #orders #orditem #produit",
+    "requete": "SELECT date_order,Facture, (convert(quantite,char)) as quantite ,nom, Prix_public\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)",
+    "fichier": "html/f_eval/index.php"
+  },
+  {
+    "descriptif": "Détail palmarès BIG (EAN13 ciblés). #orders #orditem #produit",
+    "requete": "SELECT date_order,Facture, (convert(quantite,char)) as quantite ,nom, Prix_public\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)",
+    "fichier": "html/f_eval/index.php"
+  },
+  {
+    "descriptif": "Détail palmarès Frang (EAN13 ciblés). #orders #orditem #produit",
+    "requete": "SELECT date_order,Facture, (convert(quantite,char)) as quantite ,nom, Prix_public\n  FROM orders as a\n  LEFT JOIN orditem as b on a.ti=b.order_ti\n  LEFT JOIN produit as c on c.cip=b.cip\n  WHERE a.code_subro not in (\"RETF\")\n    and YEAR(date_order) = <année>\n    and month(date_order) = <mois>\n    and ean13 in (...)",
+    "fichier": "html/f_eval/index.php"
+  },
+  {
+    "descriptif": "Ratio remboursé vs total sur 6 mois. #ORDERS #ORDITEM #produit",
+    "requete": "Select ORDERS.Oper_Code, ORDERS.Date_order, produit.Nom, produit.Code_rembt, ORDITEM.Quantite, ORDITEM.Prix,\n         ROUND(SUM(CASE WHEN produit.Code_rembt = 4 THEN ORDITEM.Quantite * ORDITEM.Prix ELSE 0 END),2) AS Somme_rembt_4,\n         ROUND(SUM(ORDITEM.Quantite * ORDITEM.Prix),2) AS Somme_total,\n         ROUND(SUM(CASE WHEN produit.Code_rembt = 4 THEN ORDITEM.Quantite * ORDITEM.Prix ELSE 0 END) / SUM(ORDITEM.Quantite * ORDITEM.Prix), 2) * 100 AS ratio\n  From ORDERS\n  Inner Join ORDITEM On ORDITEM.Order_TI = ORDERS.TI\n  Inner Join produit On produit.CIP = ORDITEM.CIP\n  Where ORDERS.Date_order Between Date_Sub(Now(), Interval 6 Month) And Now()\n  GROUP BY ORDERS.Oper_Code",
+    "fichier": "html/f_eval/index.php"
+  },
+  {
+    "descriptif": "Liste des produits par code géo. #produit",
+    "requete": "select Nom, En_Stock, Prix_Public, EAN13 from produit where Code_Geo='<codegeo>'",
+    "fichier": "html/maj_prix/action.php"
+  },
+  {
+    "descriptif": "Mise à jour du prix public (EAN13). #produit",
+    "requete": "update produit set Prix_Public = <prix> where EAN13='<ean13>'",
+    "fichier": "html/maj_prix/action.php"
+  },
+  {
+    "descriptif": "Sélection des prix pour mise à jour en masse. #produit",
+    "requete": "select Prix_Public, EAN13 from produit where codegeo='<codegeo>'",
+    "fichier": "html/maj_prix/action.php"
+  },
+  {
+    "descriptif": "Codes géographiques disponibles. #CODEGEO",
+    "requete": "select Code_Geo, Nom_Geo from CODEGEO",
+    "fichier": "html/maj_prix/index.php"
+  },
+  {
+    "descriptif": "Liste des pharmacies (étape 1). #COMPHARM",
+    "requete": "SELECT * FROM COMPHARM WHERE Etape=1",
+    "fichier": "html/todo_list/action.php"
+  }
+]
