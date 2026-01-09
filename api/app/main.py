@@ -39,6 +39,7 @@ if static_dir.exists():
 
 
 class ExtractPayload(BaseModel):
+    sql: str
     params: dict | None = None
 
 

@@ -14,6 +14,7 @@ app = FastAPI(title="Winpharma Extractor")
 
 
 class ExtractRequest(BaseModel):
+    sql: str
     params: dict | None = None
 
 
@@ -25,7 +26,7 @@ def health() -> dict:
 @app.post("/extract/{pharma_id}/{dataset}")
 def extract(pharma_id: str, dataset: str, payload: ExtractRequest) -> dict:
     try:
-        result = extract_dataset(settings, pharma_id, dataset, payload.params)
+        result = extract_dataset(settings, pharma_id, dataset, payload.sql, payload.params)
         persist_result(settings, pharma_id, dataset, result)
         return {"status": "ok", "dataset": dataset}
     except ExtractionError as exc:

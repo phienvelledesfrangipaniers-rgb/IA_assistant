@@ -33,7 +33,11 @@ class DataSnapClient:
         for attempt in range(1, self.retries + 1):
             try:
                 with httpx.Client(timeout=self.timeout) as client:
-                    response = client.post(self._endpoint(method_name), json=payload)
+                    response = client.post(
+                        self._endpoint(method_name),
+                        json=payload,
+                        headers={"Accept": "application/json", "Content-Type": "application/json"},
+                    )
                 response.raise_for_status()
                 data = response.json()
                 if "result" not in data:

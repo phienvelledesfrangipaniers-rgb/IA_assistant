@@ -6,7 +6,6 @@ from .config import Settings
 from .datasnap import DataSnapClient
 from .db import insert_payload
 from .logger import get_logger
-from .queries import DATASET_QUERIES
 
 
 class ExtractionError(RuntimeError):
@@ -17,23 +16,22 @@ def extract_dataset(
     settings: Settings,
     pharma_id: str,
     dataset: str,
+    sql: str,
     params: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    if dataset not in DATASET_QUERIES:
-        raise ExtractionError(f"Unknown dataset '{dataset}'")
-
+    if not sql:
+        raise ExtractionError("SQL query is required")
     host = settings.pharmacy_hosts.get(pharma_id)
     if not host:
         raise ExtractionError(f"Unknown pharmacy '{pharma_id}'")
 
-    query_config = DATASET_QUERIES[dataset]
     client = DataSnapClient(host, timeout=settings.datasnap_timeout, retries=settings.datasnap_retries)
-    payload = dict(query_config["payload"])
+    payload: dict[str, Any] = {"sql": sql}
     if params:
         payload["params"] = params
 
     logger = get_logger("extractor", pharma_id=pharma_id, dataset=dataset)
-    response = client.call(query_config["method"], payload)
+    response = client.call("query_thread", payload)
     logger.info("datasnap_response")
 
     return {"dataset": dataset, "result": response.result}

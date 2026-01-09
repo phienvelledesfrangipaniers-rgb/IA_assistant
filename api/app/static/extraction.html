@@ -70,7 +70,8 @@
         color: #4b5563;
       }
       input,
-      select {
+      select,
+      textarea {
         width: 100%;
         padding: 8px 10px;
         border-radius: 8px;
@@ -130,14 +131,20 @@
               <div>
                 <label for="extract-dataset">Dataset</label>
                 <select id="extract-dataset">
-                  <option value="sales">sales</option>
+                  <option value="manual">manual</option>
                   <option value="products">products</option>
-                  <option value="stock">stock</option>
-                  <option value="purchases">purchases</option>
                   <option value="orders">orders</option>
                   <option value="order_items">order_items</option>
                 </select>
               </div>
+            </div>
+            <div style="margin-top: 12px">
+              <label for="extract-sql">SQL à extraire</label>
+              <textarea
+                id="extract-sql"
+                rows="6"
+                placeholder="SELECT * FROM produit LIMIT 100"
+              ></textarea>
             </div>
             <div style="margin-top: 12px">
               <button id="extract-btn">Lancer l'extraction</button>
@@ -168,6 +175,7 @@
       const datasetInput = document.getElementById("extract-dataset");
       const endpointOutput = document.getElementById("extract-endpoint");
       const payloadOutput = document.getElementById("extract-payload");
+      const sqlInput = document.getElementById("extract-sql");
       const savedQuerySelect = document.getElementById("saved-query-select");
       const savedQueryDescription = document.getElementById("saved-query-description");
       const savedQuerySql = document.getElementById("saved-query-sql");
@@ -178,7 +186,7 @@
       function updatePreview() {
         const pharma = pharmaInput.value || "frang";
         const dataset = datasetInput.value || "sales";
-        const payload = { params: null };
+        const payload = { sql: sqlInput.value || "", params: null };
         endpointOutput.textContent = `${window.location.origin}/extract/${pharma}/${dataset}`;
         payloadOutput.textContent = JSON.stringify(payload, null, 2);
       }
@@ -192,7 +200,7 @@
         const response = await fetch(`/extract/${pharma}/${dataset}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ params: null }),
+          body: JSON.stringify({ sql: sqlInput.value, params: null }),
         });
         const data = await response.json();
         output.textContent = JSON.stringify(data, null, 2);
@@ -200,6 +208,7 @@
 
       pharmaInput.addEventListener("input", updatePreview);
       datasetInput.addEventListener("change", updatePreview);
+      sqlInput.addEventListener("input", updatePreview);
       updatePreview();
 
       async function loadSavedQueries() {
@@ -225,6 +234,10 @@
         }
         savedQueryDescription.textContent = query.description || "Aucune description.";
         savedQuerySql.textContent = query.sql_text || "-- SQL";
+        if (!sqlInput.value) {
+          sqlInput.value = query.sql_text || "";
+          updatePreview();
+        }
       });
 
       savedQueryRun.addEventListener("click", async () => {
