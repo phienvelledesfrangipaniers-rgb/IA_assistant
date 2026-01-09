@@ -79,6 +79,10 @@ class EnvUpdatePayload(BaseModel):
     content: str
 
 
+class ConnectorUpdatePayload(BaseModel):
+    url: str = ""
+
+
 class TableInfoPayload(BaseModel):
     pharma_id: str
     table: str
@@ -182,6 +186,29 @@ def _read_env_file() -> str:
     return env_file.read_text(encoding="utf-8")
 
 
+def _update_env_value(content: str, key: str, value: str) -> str:
+    lines = content.splitlines()
+    updated = False
+    new_lines: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            new_lines.append(line)
+            continue
+        current_key = stripped.split("=", 1)[0].strip()
+        if current_key == key:
+            new_lines.append(f"{key}={value}")
+            updated = True
+        else:
+            new_lines.append(line)
+    if not updated:
+        new_lines.append(f"{key}={value}")
+    new_content = "\n".join(new_lines)
+    if content.endswith("\n"):
+        new_content += "\n"
+    return new_content
+
+
 def _apply_env_content(content: str) -> None:
     for line in content.splitlines():
         stripped = line.strip()
@@ -206,6 +233,21 @@ def env_save(payload: EnvUpdatePayload) -> dict[str, Any]:
     env_file.write_text(payload.content, encoding="utf-8")
     _apply_env_content(payload.content)
     return {"status": "ok", "path": str(env_file)}
+
+
+@app.get("/config/connector")
+def config_connector() -> dict[str, Any]:
+    return {"url": os.environ.get("EXTRACTOR_URL", "")}
+
+
+@app.post("/config/connector")
+def config_connector_save(payload: ConnectorUpdatePayload) -> dict[str, Any]:
+    env_file = _env_file_path()
+    content = _read_env_file()
+    updated = _update_env_value(content, "EXTRACTOR_URL", payload.url)
+    env_file.write_text(updated, encoding="utf-8")
+    _apply_env_content(updated)
+    return {"status": "ok", "url": payload.url}
 
 
 @app.get("/health")
