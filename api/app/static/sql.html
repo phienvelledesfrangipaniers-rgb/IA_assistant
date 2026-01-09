@@ -993,8 +993,15 @@
       }
 
       async function loadSavedQueries() {
-        const response = await fetch("/queries");
-        const data = await response.json();
+        let response = await fetch("/queries");
+        let data = await response.json();
+        if (!data.items || data.items.length === 0) {
+          const importResponse = await fetch("/queries/catalog/import", { method: "POST" });
+          if (importResponse.ok) {
+            response = await fetch("/queries");
+            data = await response.json();
+          }
+        }
         savedQueries = data.items || [];
         savedQuerySelect.innerHTML = "<option value=\"\">-- Sélectionner --</option>";
         savedQueries.forEach((query) => {
