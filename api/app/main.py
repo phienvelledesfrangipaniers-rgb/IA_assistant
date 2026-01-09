@@ -22,6 +22,7 @@ from .table_descriptions import (
     save_table_description,
 )
 from .query_catalog import (
+    catalog_entries_with_names,
     export_catalog_queries,
     import_catalog_queries,
     read_catalog_content,
@@ -421,7 +422,28 @@ def sql_table_descriptions_save(payload: TableDescriptionPayload) -> dict[str, A
 
 @app.get("/queries")
 def queries_list() -> dict[str, Any]:
-    return {"items": list_queries()}
+    try:
+        return {"items": list_queries()}
+    except Exception:
+        try:
+            entries = catalog_entries_with_names(read_catalog_content())
+        except FileNotFoundError:
+            entries = []
+        items = []
+        for idx, entry in enumerate(entries, start=1):
+            items.append(
+                {
+                    "id": idx,
+                    "name": entry.get("name"),
+                    "description": entry.get("description"),
+                    "tags": entry.get("tags") or [],
+                    "sql_text": entry.get("sql_text"),
+                    "source": entry.get("source"),
+                    "created_at": None,
+                    "updated_at": None,
+                }
+            )
+        return {"items": items}
 
 @app.post("/queries")
 def query_create(payload: SavedQueryPayload) -> dict[str, Any]:
