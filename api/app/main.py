@@ -423,15 +423,6 @@ def sql_table_descriptions_save(payload: TableDescriptionPayload) -> dict[str, A
 def queries_list() -> dict[str, Any]:
     return {"items": list_queries()}
 
-
-@app.get("/queries/{query_id}")
-def query_get(query_id: int) -> dict[str, Any]:
-    query = get_query(query_id)
-    if not query:
-        raise HTTPException(status_code=404, detail="Query not found")
-    return query
-
-
 @app.post("/queries")
 def query_create(payload: SavedQueryPayload) -> dict[str, Any]:
     query = create_query(
@@ -493,6 +484,13 @@ def queries_catalog_export() -> dict[str, Any]:
     write_catalog_content(content)
     return {"status": "ok", "content": content}
 
+
+@app.get("/queries/{query_id}")
+def query_get(query_id: int) -> dict[str, Any]:
+    query = get_query(query_id)
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+    return query
 
 @app.post("/rag/ask")
 def rag_ask(payload: RagAskPayload) -> dict[str, Any]:
