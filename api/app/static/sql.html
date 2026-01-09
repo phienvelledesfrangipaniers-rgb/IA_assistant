@@ -203,7 +203,7 @@
         border: 2px dashed #cbd5f5;
         border-radius: 12px;
         padding: 12px;
-        min-height: 160px;
+        min-height: 320px;
         background: #f8fafc;
         position: relative;
       }
@@ -216,6 +216,9 @@
         border: 1px solid #e2e8f0;
         margin-bottom: 8px;
         font-size: 13px;
+        max-width: 150px;
+        max-height: 280px;
+        overflow: auto;
       }
       .join-item-header {
         display: flex;
@@ -224,7 +227,7 @@
         gap: 8px;
       }
       .join-item-header span {
-        max-width: 50px;
+        max-width: 150px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -237,8 +240,10 @@
       .join-columns label {
         display: flex;
         align-items: flex-start;
+        justify-content: flex-start;
         gap: 6px;
         font-size: 12px;
+        text-align: left;
       }
       .join-columns input[type="checkbox"] {
         margin-top: 2px;
@@ -571,6 +576,7 @@
       let allTables = [];
       const joinTables = new Map();
       const joinItems = new Map();
+      let dragState = null;
 
       function normalizeValue(value) {
         if (value === null || value === undefined) return "";
@@ -822,6 +828,7 @@
         item.style.position = "absolute";
         const header = document.createElement("div");
         header.className = "join-item-header";
+        header.style.cursor = "move";
         const label = document.createElement("span");
         label.textContent = table;
         const remove = document.createElement("button");
@@ -839,6 +846,19 @@
         });
         header.appendChild(label);
         header.appendChild(remove);
+        header.addEventListener("pointerdown", (event) => {
+          if (event.button !== 0) return;
+          event.preventDefault();
+          const rect = item.getBoundingClientRect();
+          const areaRect = joinArea.getBoundingClientRect();
+          dragState = {
+            item,
+            offsetX: event.clientX - rect.left,
+            offsetY: event.clientY - rect.top,
+            areaLeft: areaRect.left,
+            areaTop: areaRect.top,
+          };
+        });
         const columnsBox = document.createElement("div");
         renderJoinColumns(columnsBox, table, cols);
         item.appendChild(header);
@@ -847,10 +867,20 @@
         joinItems.set(table, item);
       }
 
+      function clampJoinPosition(item, position) {
+        const maxLeft = Math.max(0, joinArea.clientWidth - item.offsetWidth);
+        const maxTop = Math.max(0, joinArea.clientHeight - item.offsetHeight);
+        return {
+          x: Math.min(Math.max(0, position.x), maxLeft),
+          y: Math.min(Math.max(0, position.y), maxTop),
+        };
+      }
+
       function positionJoinItem(item, position) {
         if (!position) return;
-        item.style.left = `${Math.max(0, position.x)}px`;
-        item.style.top = `${Math.max(0, position.y)}px`;
+        const clamped = clampJoinPosition(item, position);
+        item.style.left = `${clamped.x}px`;
+        item.style.top = `${clamped.y}px`;
       }
 
       async function addJoinItem(table, position) {
@@ -866,20 +896,6 @@
         updateAvailableColumns();
         renderJoinItem(table, cols);
         positionJoinItem(joinItems.get(table), position);
-        filtersContainer.innerHTML = "";
-        filtersContainer.appendChild(buildFilterRow());
-        sortContainer.innerHTML = "";
-        sortContainer.appendChild(buildSortRow());
-      }
-
-      async function addJoinItem(table) {
-        if (joinTables.has(table)) {
-          return;
-        }
-        const cols = await fetchColumns(table);
-        joinTables.set(table, cols);
-        updateAvailableColumns();
-        renderJoinItem(table, cols);
         filtersContainer.innerHTML = "";
         filtersContainer.appendChild(buildFilterRow());
         sortContainer.innerHTML = "";
@@ -1136,6 +1152,23 @@
           await addJoinItem(table, position);
           tableBadge.textContent = `Table active: ${table}`;
         }
+      });
+
+      joinArea.addEventListener("pointermove", (event) => {
+        if (!dragState) return;
+        const position = {
+          x: event.clientX - dragState.areaLeft - dragState.offsetX,
+          y: event.clientY - dragState.areaTop - dragState.offsetY,
+        };
+        positionJoinItem(dragState.item, position);
+      });
+
+      joinArea.addEventListener("pointerup", () => {
+        dragState = null;
+      });
+
+      joinArea.addEventListener("pointerleave", () => {
+        dragState = null;
       });
 
       function getSelectedTable() {
