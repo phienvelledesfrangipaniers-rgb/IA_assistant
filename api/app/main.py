@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import json
 import os
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -539,8 +540,18 @@ def queries_catalog_read() -> dict[str, Any]:
 
 
 @app.put("/queries/catalog")
-def queries_catalog_write(payload: CatalogPayload) -> dict[str, Any]:
-    write_catalog_content(payload.content)
+def queries_catalog_write(
+    payload: CatalogPayload | list[dict[str, Any]] | str = Body(...)
+) -> dict[str, Any]:
+    if isinstance(payload, CatalogPayload):
+        content = payload.content
+    elif isinstance(payload, list):
+        content = json.dumps(payload, ensure_ascii=False, indent=2)
+    elif isinstance(payload, str):
+        content = payload
+    else:
+        raise HTTPException(status_code=422, detail="Invalid catalog payload")
+    write_catalog_content(content)
     return {"status": "ok"}
 
 

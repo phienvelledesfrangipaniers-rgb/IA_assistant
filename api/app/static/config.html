@@ -249,18 +249,41 @@
       async function loadCatalog() {
         catalogStatus.textContent = "Chargement du catalogue...";
         const response = await fetch("/queries/catalog");
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          const text = await response.text();
+          catalogStatus.textContent = text || "Erreur lors du chargement.";
+          return;
+        }
+        if (!response.ok) {
+          catalogStatus.textContent = data.detail || "Erreur lors du chargement.";
+          return;
+        }
         catalogContent.value = data.content || "";
         catalogStatus.textContent = "Catalogue chargé.";
       }
 
       async function saveCatalog() {
         catalogStatus.textContent = "Enregistrement du catalogue...";
-        await fetch("/queries/catalog", {
+        const response = await fetch("/queries/catalog", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ content: catalogContent.value }),
         });
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          const text = await response.text();
+          catalogStatus.textContent = text || "Erreur lors de l'enregistrement.";
+          return;
+        }
+        if (!response.ok) {
+          catalogStatus.textContent = data.detail || "Erreur lors de l'enregistrement.";
+          return;
+        }
         catalogStatus.textContent = "Catalogue enregistré.";
       }
 
