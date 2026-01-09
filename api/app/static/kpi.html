@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KPI - Assistant IA Pharmacie</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      nav {
+        width: 220px;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      nav h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 12px 0;
+        color: #94a3b8;
+      }
+      nav a {
+        color: #e2e8f0;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: block;
+      }
+      nav a.active,
+      nav a:hover {
+        background: #1e293b;
+      }
+      .content {
+        flex: 1;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 24px 32px;
+      }
+      main {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 24px 48px;
+        display: grid;
+        gap: 20px;
+      }
+      section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+        color: #4b5563;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+      button {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #e5e7eb;
+        color: #111827;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h2>Navigation</h2>
+        <a href="/">Console</a>
+        <a href="/extraction">Extractions</a>
+        <a class="active" href="/kpi">KPI</a>
+        <a href="/rag">RAG</a>
+        <a href="/prompt">Prompt</a>
+        <a href="/sql">SQL</a>
+        <a href="/config">Configuration</a>
+        <a href="/env">Environnement</a>
+      </nav>
+      <div class="content">
+        <header>
+          <h1>KPI</h1>
+          <p>Consultez les indicateurs clés par pharmacie.</p>
+        </header>
+        <main>
+          <section>
+            <h2>Paramètres</h2>
+            <div class="grid">
+              <div>
+                <label for="kpi-pharma">Pharmacie</label>
+                <input id="kpi-pharma" placeholder="frang" value="frang" />
+              </div>
+              <div>
+                <label for="kpi-from">Du</label>
+                <input id="kpi-from" type="date" />
+              </div>
+              <div>
+                <label for="kpi-to">Au</label>
+                <input id="kpi-to" type="date" />
+              </div>
+            </div>
+            <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap">
+              <button class="secondary" data-kpi="sales">Ventes</button>
+              <button class="secondary" data-kpi="stock_alerts">Alertes stock</button>
+              <button class="secondary" data-kpi="purchases">Achats</button>
+            </div>
+            <pre id="kpi-output">Sélectionnez un KPI.</pre>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      document.querySelectorAll("button[data-kpi]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const pharma = document.getElementById("kpi-pharma").value;
+          const from = document.getElementById("kpi-from").value;
+          const to = document.getElementById("kpi-to").value;
+          const endpoint = btn.dataset.kpi;
+          const params = new URLSearchParams();
+          if (from) params.append("from", from);
+          if (to) params.append("to", to);
+          const response = await fetch(`/kpi/${pharma}/${endpoint}?${params.toString()}`);
+          const data = await response.json();
+          document.getElementById("kpi-output").textContent = JSON.stringify(data, null, 2);
+        });
+      });
+    </script>
+  </body>
+</html>

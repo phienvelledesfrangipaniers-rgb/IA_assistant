@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Extraction Winpharma - Assistant IA Pharmacie</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      nav {
+        width: 220px;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      nav h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 12px 0;
+        color: #94a3b8;
+      }
+      nav a {
+        color: #e2e8f0;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: block;
+      }
+      nav a.active,
+      nav a:hover {
+        background: #1e293b;
+      }
+      .content {
+        flex: 1;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 24px 32px;
+      }
+      main {
+        max-width: 900px;
+        margin: 24px auto;
+        padding: 0 24px 48px;
+        display: grid;
+        gap: 20px;
+      }
+      section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      }
+      label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 6px;
+        color: #4b5563;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+      button {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      pre {
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 12px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 12px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h2>Navigation</h2>
+        <a href="/">Console</a>
+        <a class="active" href="/extraction">Extractions</a>
+        <a href="/kpi">KPI</a>
+        <a href="/rag">RAG</a>
+        <a href="/prompt">Prompt</a>
+        <a href="/sql">SQL</a>
+        <a href="/config">Configuration</a>
+        <a href="/env">Environnement</a>
+      </nav>
+      <div class="content">
+        <header>
+          <h1>Extraction Winpharma</h1>
+          <p>Lancer des extractions DataSnap et suivre le résultat.</p>
+        </header>
+        <main>
+          <section>
+            <h2>Lancer une extraction</h2>
+            <div class="grid">
+              <div>
+                <label for="extract-pharma">Pharmacie</label>
+                <input id="extract-pharma" placeholder="frang" value="frang" />
+              </div>
+              <div>
+                <label for="extract-dataset">Dataset</label>
+                <select id="extract-dataset">
+                  <option value="sales">sales</option>
+                  <option value="products">products</option>
+                  <option value="stock">stock</option>
+                  <option value="purchases">purchases</option>
+                  <option value="orders">orders</option>
+                  <option value="order_items">order_items</option>
+                </select>
+              </div>
+            </div>
+            <div style="margin-top: 12px">
+              <button id="extract-btn">Lancer l'extraction</button>
+            </div>
+            <pre id="extract-output">Aucune extraction lancée.</pre>
+          </section>
+          <section>
+            <h2>Requête envoyée</h2>
+            <p>Endpoint appelé :</p>
+            <pre id="extract-endpoint">-</pre>
+            <p>Payload JSON :</p>
+            <pre id="extract-payload">{}</pre>
+          </section>
+          <section>
+            <h2>Requêtes enregistrées</h2>
+            <label for="saved-query-select">Sélection</label>
+            <select id="saved-query-select"></select>
+            <p id="saved-query-description">Sélectionnez une requête pour voir la description.</p>
+            <pre id="saved-query-sql">-- SQL</pre>
+            <button id="saved-query-run" style="margin-top: 8px">Exécuter la requête</button>
+            <pre id="saved-query-output">Aucune requête exécutée.</pre>
+          </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      const pharmaInput = document.getElementById("extract-pharma");
+      const datasetInput = document.getElementById("extract-dataset");
+      const endpointOutput = document.getElementById("extract-endpoint");
+      const payloadOutput = document.getElementById("extract-payload");
+      const savedQuerySelect = document.getElementById("saved-query-select");
+      const savedQueryDescription = document.getElementById("saved-query-description");
+      const savedQuerySql = document.getElementById("saved-query-sql");
+      const savedQueryOutput = document.getElementById("saved-query-output");
+      const savedQueryRun = document.getElementById("saved-query-run");
+      let savedQueries = [];
+
+      function updatePreview() {
+        const pharma = pharmaInput.value || "frang";
+        const dataset = datasetInput.value || "sales";
+        const payload = { params: null };
+        endpointOutput.textContent = `${window.location.origin}/extract/${pharma}/${dataset}`;
+        payloadOutput.textContent = JSON.stringify(payload, null, 2);
+      }
+
+      document.getElementById("extract-btn").addEventListener("click", async () => {
+        const pharma = pharmaInput.value;
+        const dataset = datasetInput.value;
+        const output = document.getElementById("extract-output");
+        updatePreview();
+        output.textContent = "Extraction en cours...";
+        const response = await fetch(`/extract/${pharma}/${dataset}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ params: null }),
+        });
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      });
+
+      pharmaInput.addEventListener("input", updatePreview);
+      datasetInput.addEventListener("change", updatePreview);
+      updatePreview();
+
+      async function loadSavedQueries() {
+        const response = await fetch("/queries");
+        const data = await response.json();
+        savedQueries = data.items || [];
+        savedQuerySelect.innerHTML = "<option value=\"\">-- Sélectionner --</option>";
+        savedQueries.forEach((query) => {
+          const option = document.createElement("option");
+          option.value = query.id;
+          option.textContent = query.name;
+          savedQuerySelect.appendChild(option);
+        });
+      }
+
+      savedQuerySelect.addEventListener("change", () => {
+        const selectedId = parseInt(savedQuerySelect.value, 10);
+        const query = savedQueries.find((item) => item.id === selectedId);
+        if (!query) {
+          savedQueryDescription.textContent = "Sélectionnez une requête pour voir la description.";
+          savedQuerySql.textContent = "-- SQL";
+          return;
+        }
+        savedQueryDescription.textContent = query.description || "Aucune description.";
+        savedQuerySql.textContent = query.sql_text || "-- SQL";
+      });
+
+      savedQueryRun.addEventListener("click", async () => {
+        const selectedId = parseInt(savedQuerySelect.value, 10);
+        const query = savedQueries.find((item) => item.id === selectedId);
+        if (!query) {
+          savedQueryOutput.textContent = "Veuillez sélectionner une requête.";
+          return;
+        }
+        savedQueryOutput.textContent = "Exécution en cours...";
+        const response = await fetch("/sql/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pharma_id: pharmaInput.value, sql: query.sql_text }),
+        });
+        const data = await response.json();
+        savedQueryOutput.textContent = JSON.stringify(data, null, 2);
+      });
+
+      loadSavedQueries();
+    </script>
+  </body>
+</html>
