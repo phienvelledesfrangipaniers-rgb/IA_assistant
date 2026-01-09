@@ -38,6 +38,20 @@ if static_dir.exists():
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
+@app.on_event("startup")
+def seed_catalog_queries() -> None:
+    try:
+        if list_queries():
+            return
+    except Exception:
+        return
+    try:
+        content = read_catalog_content()
+    except FileNotFoundError:
+        return
+    import_catalog_queries(content)
+
+
 class ExtractPayload(BaseModel):
     sql: str
     params: dict | None = None
