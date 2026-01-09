@@ -115,6 +115,31 @@
         grid-template-columns: 280px minmax(0, 1fr) 320px;
         gap: 16px;
       }
+      .tabs {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .tab-button {
+        border: none;
+        background: #e2e8f0;
+        color: #1f2937;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .tab-button.active {
+        background: #2563eb;
+        color: #fff;
+      }
+      .tab-panel {
+        display: none;
+      }
+      .tab-panel.active {
+        display: block;
+      }
       .panel-title {
         font-size: 14px;
         font-weight: 700;
@@ -126,6 +151,51 @@
         max-height: 280px;
         overflow: auto;
         padding-right: 6px;
+      }
+      .treeview {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px;
+        background: #f8fafc;
+        max-height: 280px;
+        overflow: auto;
+      }
+      .tree-group {
+        margin-bottom: 10px;
+      }
+      .tree-group strong {
+        font-size: 12px;
+        color: #475569;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .tree-item {
+        padding: 6px 8px;
+        border-radius: 8px;
+        margin-top: 6px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        cursor: grab;
+        font-size: 13px;
+      }
+      .join-area {
+        border: 2px dashed #cbd5f5;
+        border-radius: 12px;
+        padding: 12px;
+        min-height: 160px;
+        background: #f8fafc;
+      }
+      .join-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 6px 8px;
+        border-radius: 8px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        margin-bottom: 8px;
+        font-size: 13px;
       }
       .badge {
         display: inline-flex;
@@ -224,7 +294,14 @@
           </div>
         </header>
         <main>
-      <section class="builder">
+      <section>
+        <div class="tabs">
+          <button class="tab-button active" data-tab="builder">Source & Construction</button>
+          <button class="tab-button" data-tab="results">Résultats</button>
+          <button class="tab-button" data-tab="manual">Requête manuelle</button>
+        </div>
+        <div class="tab-panel active" id="tab-builder">
+          <div class="builder">
         <div>
           <h2 class="panel-title">Source de données</h2>
           <label for="sql-pharma">Pharmacie</label>
@@ -239,11 +316,19 @@
             <h3 class="panel-title">Colonnes</h3>
             <div id="sql-columns" class="field-list"></div>
           </div>
+          <div style="margin-top: 16px">
+            <h3 class="panel-title">Tables (treeview)</h3>
+            <div id="table-tree" class="treeview"></div>
+          </div>
         </div>
         <div>
           <h2 class="panel-title">Construction visuelle</h2>
           <label for="sql-limit">Limite de lignes</label>
           <input id="sql-limit" type="number" value="50" min="1" />
+          <div style="margin-top: 16px">
+            <strong>Zone de jointure</strong>
+            <div id="join-area" class="join-area">Glissez des tables ici pour préparer des jointures.</div>
+          </div>
           <div style="margin-top: 16px">
             <strong>Filtres</strong>
             <div id="sql-filters" class="controls" style="margin-top: 8px"></div>
@@ -264,13 +349,22 @@
           </div>
         </div>
         <div>
-          <h2 class="panel-title">Requête manuelle</h2>
-          <label for="sql-query">Requête SELECT</label>
-          <textarea
-            id="sql-query"
-            rows="8"
-            placeholder="SELECT * FROM produit LIMIT 50"
-          ></textarea>
+          <h3 class="panel-title" style="margin-top: 16px">Requêtes enregistrées</h3>
+          <label for="saved-query-select">Sélection</label>
+          <select id="saved-query-select"></select>
+          <label for="saved-query-name" style="margin-top: 12px">Nom</label>
+          <input id="saved-query-name" placeholder="Nom de la requête" />
+          <label for="saved-query-tags" style="margin-top: 12px">Tags</label>
+          <input id="saved-query-tags" placeholder="ex: orders, produit" />
+          <label for="saved-query-source" style="margin-top: 12px">Source</label>
+          <input id="saved-query-source" placeholder="cron.php" />
+          <label for="saved-query-description" style="margin-top: 12px">Description</label>
+          <textarea id="saved-query-description" rows="4" placeholder="Description fonctionnelle"></textarea>
+          <div style="margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap">
+            <button id="saved-query-new" class="secondary">Nouveau</button>
+            <button id="saved-query-save">Enregistrer</button>
+            <button id="saved-query-delete" class="secondary">Supprimer</button>
+          </div>
           <h3 class="panel-title" style="margin-top: 16px">Description de la table</h3>
           <p class="status">
             Ajoutez une description métier pour aider l'IA à comprendre l'usage de la table.
@@ -278,35 +372,46 @@
           <textarea id="sql-table-description" rows="5" placeholder="Ex: contient les lignes de commandes clients"></textarea>
           <button id="sql-save-description" style="margin-top: 12px">Enregistrer</button>
         </div>
-      </section>
-      <section>
-        <h2>Résultat</h2>
-        <div class="controls" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))">
-          <div>
-            <label for="sql-filter">Filtre global</label>
-            <input id="sql-filter" placeholder="Rechercher une valeur..." />
-          </div>
-          <div>
-            <label for="sql-page-size">Taille de page</label>
-            <select id="sql-page-size">
-              <option value="10">10</option>
-              <option value="20" selected>20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </select>
           </div>
         </div>
-        <p class="status" id="sql-status">En attente d'une requête.</p>
-        <div class="table-wrapper">
-          <table id="sql-table">
-            <thead></thead>
-            <tbody></tbody>
-          </table>
+        <div class="tab-panel" id="tab-results">
+          <h2>Résultat</h2>
+          <div class="controls" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))">
+            <div>
+              <label for="sql-filter">Filtre global</label>
+              <input id="sql-filter" placeholder="Rechercher une valeur..." />
+            </div>
+            <div>
+              <label for="sql-page-size">Taille de page</label>
+              <select id="sql-page-size">
+                <option value="10">10</option>
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+          <p class="status" id="sql-status">En attente d'une requête.</p>
+          <div class="table-wrapper">
+            <table id="sql-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="pagination" style="margin-top: 12px">
+            <button id="sql-prev" class="secondary">Précédent</button>
+            <span id="sql-page-info">Page 1</span>
+            <button id="sql-next" class="secondary">Suivant</button>
+          </div>
         </div>
-        <div class="pagination" style="margin-top: 12px">
-          <button id="sql-prev" class="secondary">Précédent</button>
-          <span id="sql-page-info">Page 1</span>
-          <button id="sql-next" class="secondary">Suivant</button>
+        <div class="tab-panel" id="tab-manual">
+          <h2>Requête manuelle</h2>
+          <label for="sql-query">Requête SELECT</label>
+          <textarea
+            id="sql-query"
+            rows="10"
+            placeholder="SELECT * FROM produit LIMIT 50"
+          ></textarea>
         </div>
       </section>
         </main>
@@ -337,6 +442,20 @@
       const previewEl = document.getElementById("sql-preview");
       const refreshBtn = document.getElementById("sql-refresh");
       const tableBadge = document.getElementById("sql-table-badge");
+      const tableTree = document.getElementById("table-tree");
+      const joinArea = document.getElementById("join-area");
+      const tabs = document.querySelectorAll(".tab-button");
+      const tabPanels = document.querySelectorAll(".tab-panel");
+      const savedQuerySelect = document.getElementById("saved-query-select");
+      const savedQueryName = document.getElementById("saved-query-name");
+      const savedQueryTags = document.getElementById("saved-query-tags");
+      const savedQuerySource = document.getElementById("saved-query-source");
+      const savedQueryDescription = document.getElementById("saved-query-description");
+      const savedQuerySave = document.getElementById("saved-query-save");
+      const savedQueryDelete = document.getElementById("saved-query-delete");
+      const savedQueryNew = document.getElementById("saved-query-new");
+      let savedQueries = [];
+      let activeQueryId = null;
 
       let rows = [];
       let columns = [];
@@ -534,6 +653,44 @@
         });
       }
 
+      function renderTableTree(tables) {
+        tableTree.innerHTML = "";
+        if (!tables.length) {
+          tableTree.textContent = "Aucune table disponible.";
+          return;
+        }
+        const group = document.createElement("div");
+        group.className = "tree-group";
+        const title = document.createElement("strong");
+        title.textContent = "Tables";
+        group.appendChild(title);
+        tables.forEach((table) => {
+          const item = document.createElement("div");
+          item.className = "tree-item";
+          item.textContent = table;
+          item.draggable = true;
+          item.addEventListener("dragstart", (event) => {
+            event.dataTransfer.setData("text/plain", table);
+          });
+          group.appendChild(item);
+        });
+        tableTree.appendChild(group);
+      }
+
+      function addJoinItem(table) {
+        const item = document.createElement("div");
+        item.className = "join-item";
+        const label = document.createElement("span");
+        label.textContent = table;
+        const remove = document.createElement("button");
+        remove.className = "secondary";
+        remove.textContent = "Retirer";
+        remove.addEventListener("click", () => item.remove());
+        item.appendChild(label);
+        item.appendChild(remove);
+        joinArea.appendChild(item);
+      }
+
       function buildQuery() {
         const table = tableSelect.value;
         const selectedColumns = Array.from(columnsContainer.querySelectorAll("input[type='checkbox']"))
@@ -589,6 +746,7 @@
           tableSelect.value = tableSelect.options[0].value;
         }
         tableBadge.textContent = tableSelect.value ? `Table: ${tableSelect.value}` : "Aucune table";
+        renderTableTree(data.tables || []);
       }
 
       async function loadColumns() {
@@ -631,6 +789,40 @@
         });
       }
 
+      function resetSavedQueryForm() {
+        activeQueryId = null;
+        savedQuerySelect.value = "";
+        savedQueryName.value = "";
+        savedQueryTags.value = "";
+        savedQuerySource.value = "";
+        savedQueryDescription.value = "";
+      }
+
+      function fillSavedQueryForm(query) {
+        activeQueryId = query?.id ?? null;
+        savedQueryName.value = query?.name || "";
+        savedQueryTags.value = (query?.tags || []).join(", ");
+        savedQuerySource.value = query?.source || "";
+        savedQueryDescription.value = query?.description || "";
+        if (query?.sql_text) {
+          queryInput.value = query.sql_text;
+          previewEl.textContent = query.sql_text;
+        }
+      }
+
+      async function loadSavedQueries() {
+        const response = await fetch("/queries");
+        const data = await response.json();
+        savedQueries = data.items || [];
+        savedQuerySelect.innerHTML = "<option value=\"\">-- Sélectionner --</option>";
+        savedQueries.forEach((query) => {
+          const option = document.createElement("option");
+          option.value = query.id;
+          option.textContent = query.name;
+          savedQuerySelect.appendChild(option);
+        });
+      }
+
       document.getElementById("sql-run").addEventListener("click", async () => {
         const pharma = pharmaSelect.value;
         const sql = queryInput.value;
@@ -669,6 +861,52 @@
         statusEl.textContent = "Description enregistrée.";
       });
 
+      savedQuerySelect.addEventListener("change", () => {
+        const selectedId = parseInt(savedQuerySelect.value, 10);
+        const query = savedQueries.find((item) => item.id === selectedId);
+        if (!query) {
+          resetSavedQueryForm();
+          return;
+        }
+        fillSavedQueryForm(query);
+      });
+
+      savedQueryNew.addEventListener("click", () => {
+        resetSavedQueryForm();
+      });
+
+      savedQuerySave.addEventListener("click", async () => {
+        const payload = {
+          name: savedQueryName.value,
+          description: savedQueryDescription.value,
+          tags: savedQueryTags.value
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean),
+          sql_text: queryInput.value,
+          source: savedQuerySource.value,
+        };
+        const url = activeQueryId ? `/queries/${activeQueryId}` : "/queries";
+        const method = activeQueryId ? "PUT" : "POST";
+        const response = await fetch(url, {
+          method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await response.json();
+        await loadSavedQueries();
+        fillSavedQueryForm(data);
+        statusEl.textContent = "Requête enregistrée.";
+      });
+
+      savedQueryDelete.addEventListener("click", async () => {
+        if (!activeQueryId) return;
+        await fetch(`/queries/${activeQueryId}`, { method: "DELETE" });
+        await loadSavedQueries();
+        resetSavedQueryForm();
+        statusEl.textContent = "Requête supprimée.";
+      });
+
       pharmaSelect.addEventListener("change", async () => {
         await loadTables();
         await loadColumns();
@@ -682,6 +920,31 @@
       refreshBtn.addEventListener("click", async () => {
         await loadTables();
         await loadColumns();
+      });
+
+      joinArea.addEventListener("dragover", (event) => {
+        event.preventDefault();
+      });
+
+      joinArea.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const table = event.dataTransfer.getData("text/plain");
+        if (table) {
+          addJoinItem(table);
+        }
+      });
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((btn) => btn.classList.remove("active"));
+          tabPanels.forEach((panel) => panel.classList.remove("active"));
+          tab.classList.add("active");
+          const target = tab.dataset.tab;
+          const panel = document.getElementById(`tab-${target}`);
+          if (panel) {
+            panel.classList.add("active");
+          }
+        });
       });
 
       filterInput.addEventListener("input", () => {
@@ -708,6 +971,7 @@
         await loadPharmacies();
         await loadTables();
         await loadColumns();
+        await loadSavedQueries();
         previewEl.textContent = "Générez une requête pour voir l'aperçu SQL.";
       })();
     </script>

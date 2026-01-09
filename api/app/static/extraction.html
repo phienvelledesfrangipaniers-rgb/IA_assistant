@@ -151,6 +151,15 @@
             <p>Payload JSON :</p>
             <pre id="extract-payload">{}</pre>
           </section>
+          <section>
+            <h2>Requêtes enregistrées</h2>
+            <label for="saved-query-select">Sélection</label>
+            <select id="saved-query-select"></select>
+            <p id="saved-query-description">Sélectionnez une requête pour voir la description.</p>
+            <pre id="saved-query-sql">-- SQL</pre>
+            <button id="saved-query-run" style="margin-top: 8px">Exécuter la requête</button>
+            <pre id="saved-query-output">Aucune requête exécutée.</pre>
+          </section>
         </main>
       </div>
     </div>
@@ -159,6 +168,12 @@
       const datasetInput = document.getElementById("extract-dataset");
       const endpointOutput = document.getElementById("extract-endpoint");
       const payloadOutput = document.getElementById("extract-payload");
+      const savedQuerySelect = document.getElementById("saved-query-select");
+      const savedQueryDescription = document.getElementById("saved-query-description");
+      const savedQuerySql = document.getElementById("saved-query-sql");
+      const savedQueryOutput = document.getElementById("saved-query-output");
+      const savedQueryRun = document.getElementById("saved-query-run");
+      let savedQueries = [];
 
       function updatePreview() {
         const pharma = pharmaInput.value || "frang";
@@ -186,6 +201,50 @@
       pharmaInput.addEventListener("input", updatePreview);
       datasetInput.addEventListener("change", updatePreview);
       updatePreview();
+
+      async function loadSavedQueries() {
+        const response = await fetch("/queries");
+        const data = await response.json();
+        savedQueries = data.items || [];
+        savedQuerySelect.innerHTML = "<option value=\"\">-- Sélectionner --</option>";
+        savedQueries.forEach((query) => {
+          const option = document.createElement("option");
+          option.value = query.id;
+          option.textContent = query.name;
+          savedQuerySelect.appendChild(option);
+        });
+      }
+
+      savedQuerySelect.addEventListener("change", () => {
+        const selectedId = parseInt(savedQuerySelect.value, 10);
+        const query = savedQueries.find((item) => item.id === selectedId);
+        if (!query) {
+          savedQueryDescription.textContent = "Sélectionnez une requête pour voir la description.";
+          savedQuerySql.textContent = "-- SQL";
+          return;
+        }
+        savedQueryDescription.textContent = query.description || "Aucune description.";
+        savedQuerySql.textContent = query.sql_text || "-- SQL";
+      });
+
+      savedQueryRun.addEventListener("click", async () => {
+        const selectedId = parseInt(savedQuerySelect.value, 10);
+        const query = savedQueries.find((item) => item.id === selectedId);
+        if (!query) {
+          savedQueryOutput.textContent = "Veuillez sélectionner une requête.";
+          return;
+        }
+        savedQueryOutput.textContent = "Exécution en cours...";
+        const response = await fetch("/sql/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pharma_id: pharmaInput.value, sql: query.sql_text }),
+        });
+        const data = await response.json();
+        savedQueryOutput.textContent = JSON.stringify(data, null, 2);
+      });
+
+      loadSavedQueries();
     </script>
   </body>
 </html>

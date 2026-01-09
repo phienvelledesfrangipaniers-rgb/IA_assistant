@@ -21,6 +21,7 @@ from .table_descriptions import (
     list_table_descriptions,
     save_table_description,
 )
+from .query_store import create_query, delete_query, get_query, list_queries, update_query
 
 app = FastAPI(title="Assistant IA Pharmacie API")
 
@@ -64,6 +65,14 @@ class TableInfoPayload(BaseModel):
 class TableDescriptionPayload(BaseModel):
     table: str
     description: str
+
+
+class SavedQueryPayload(BaseModel):
+    name: str
+    description: str | None = None
+    tags: list[str] | None = None
+    sql_text: str
+    source: str | None = None
 
 
 @app.get("/")
@@ -382,6 +391,56 @@ def sql_table_descriptions(table: str | None = None) -> dict[str, Any]:
 @app.post("/sql/descriptions")
 def sql_table_descriptions_save(payload: TableDescriptionPayload) -> dict[str, Any]:
     save_table_description(payload.table, payload.description)
+    return {"status": "ok"}
+
+
+@app.get("/queries")
+def queries_list() -> dict[str, Any]:
+    return {"items": list_queries()}
+
+
+@app.get("/queries/{query_id}")
+def query_get(query_id: int) -> dict[str, Any]:
+    query = get_query(query_id)
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+    return query
+
+
+@app.post("/queries")
+def query_create(payload: SavedQueryPayload) -> dict[str, Any]:
+    query = create_query(
+        {
+            "name": payload.name,
+            "description": payload.description,
+            "tags": payload.tags or [],
+            "sql_text": payload.sql_text,
+            "source": payload.source,
+        }
+    )
+    return query
+
+
+@app.put("/queries/{query_id}")
+def query_update(query_id: int, payload: SavedQueryPayload) -> dict[str, Any]:
+    query = update_query(
+        query_id,
+        {
+            "name": payload.name,
+            "description": payload.description,
+            "tags": payload.tags or [],
+            "sql_text": payload.sql_text,
+            "source": payload.source,
+        },
+    )
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+    return query
+
+
+@app.delete("/queries/{query_id}")
+def query_delete(query_id: int) -> dict[str, Any]:
+    delete_query(query_id)
     return {"status": "ok"}
 
 

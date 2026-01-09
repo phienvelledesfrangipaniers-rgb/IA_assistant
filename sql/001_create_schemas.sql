@@ -1,6 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS staging;
 CREATE SCHEMA IF NOT EXISTS mart;
 CREATE SCHEMA IF NOT EXISTS rag;
+CREATE SCHEMA IF NOT EXISTS catalog;
 CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE IF NOT EXISTS staging.sales_raw (
@@ -82,6 +83,17 @@ CREATE TABLE IF NOT EXISTS rag.documents (
     embedding VECTOR(128),
     metadata JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS catalog.saved_queries (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    tags TEXT[],
+    sql_text TEXT NOT NULL,
+    source TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_sales_raw_pharma ON staging.sales_raw (pharma_id);
