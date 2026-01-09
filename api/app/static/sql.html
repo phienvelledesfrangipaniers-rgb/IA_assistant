@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SQL Winpharma - Assistant IA Pharmacie</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: #eef2f7;
+        color: #111827;
+      }
+      .layout {
+        display: flex;
+        min-height: 100vh;
+      }
+      nav {
+        width: 220px;
+        background: #0f172a;
+        color: #e2e8f0;
+        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      nav h2 {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin: 0 0 12px 0;
+        color: #94a3b8;
+      }
+      nav a {
+        color: #e2e8f0;
+        text-decoration: none;
+        padding: 8px 12px;
+        border-radius: 8px;
+        display: block;
+      }
+      nav a.active,
+      nav a:hover {
+        background: #1e293b;
+      }
+      .content {
+        flex: 1;
+      }
+      header {
+        background: #111827;
+        color: #fff;
+        padding: 18px 28px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      header h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+      header p {
+        margin: 4px 0 0 0;
+        opacity: 0.75;
+        font-size: 13px;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      main {
+        margin: 24px;
+        display: grid;
+        gap: 16px;
+      }
+      section {
+        background: #fff;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+      }
+      label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 13px;
+        color: #4b5563;
+      }
+      input,
+      select,
+      textarea {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        font-size: 14px;
+      }
+      button {
+        background: #2563eb;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.secondary {
+        background: #e5e7eb;
+        color: #111827;
+      }
+      a {
+        color: #93c5fd;
+      }
+      .builder {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr) 320px;
+        gap: 16px;
+      }
+      .panel-title {
+        font-size: 14px;
+        font-weight: 700;
+        margin: 0 0 12px 0;
+      }
+      .field-list {
+        display: grid;
+        gap: 8px;
+        max-height: 280px;
+        overflow: auto;
+        padding-right: 6px;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: #e0f2fe;
+        color: #0369a1;
+        font-size: 12px;
+        font-weight: 600;
+      }
+      .row-grid {
+        display: grid;
+        grid-template-columns: 1fr 120px 1fr auto;
+        gap: 8px;
+      }
+      .controls {
+        display: grid;
+        gap: 12px;
+      }
+      .table-wrapper {
+        overflow-x: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      th,
+      td {
+        padding: 8px 10px;
+        border-bottom: 1px solid #e5e7eb;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f8fafc;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      tbody tr:nth-child(even) td {
+        background: #f9fafb;
+      }
+      .pagination {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      .status {
+        font-size: 13px;
+        color: #4b5563;
+      }
+      .filter-row input {
+        font-size: 12px;
+      }
+      .sql-preview {
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 12px;
+        min-height: 140px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <nav>
+        <h2>Navigation</h2>
+        <a href="/">Console</a>
+        <a href="/extraction">Extractions</a>
+        <a href="/kpi">KPI</a>
+        <a href="/rag">RAG</a>
+        <a href="/prompt">Prompt</a>
+        <a class="active" href="/sql">SQL</a>
+        <a href="/config">Configuration</a>
+        <a href="/env">Environnement</a>
+      </nav>
+      <div class="content">
+        <header>
+          <div>
+            <h1>Éditeur de requêtes visuel</h1>
+            <p>Conception visuelle des requêtes Winpharma (style Visual Query Editor).</p>
+          </div>
+          <div class="toolbar">
+            <button id="sql-generate" class="secondary">Générer SQL</button>
+            <button id="sql-run">Exécuter</button>
+          </div>
+        </header>
+        <main>
+      <section class="builder">
+        <div>
+          <h2 class="panel-title">Source de données</h2>
+          <label for="sql-pharma">Pharmacie</label>
+          <select id="sql-pharma"></select>
+          <label for="sql-table" style="margin-top: 12px">Table</label>
+          <select id="sql-table"></select>
+          <button id="sql-refresh" class="secondary" style="margin-top: 12px">Actualiser</button>
+          <div style="margin-top: 16px">
+            <span class="badge" id="sql-table-badge">Aucune table</span>
+          </div>
+          <div style="margin-top: 16px">
+            <h3 class="panel-title">Colonnes</h3>
+            <div id="sql-columns" class="field-list"></div>
+          </div>
+        </div>
+        <div>
+          <h2 class="panel-title">Construction visuelle</h2>
+          <label for="sql-limit">Limite de lignes</label>
+          <input id="sql-limit" type="number" value="50" min="1" />
+          <div style="margin-top: 16px">
+            <strong>Filtres</strong>
+            <div id="sql-filters" class="controls" style="margin-top: 8px"></div>
+            <button id="sql-add-filter" class="secondary" style="margin-top: 8px">
+              Ajouter un filtre
+            </button>
+          </div>
+          <div style="margin-top: 16px">
+            <strong>Tri</strong>
+            <div id="sql-sorts" class="controls" style="margin-top: 8px"></div>
+            <button id="sql-add-sort" class="secondary" style="margin-top: 8px">
+              Ajouter un tri
+            </button>
+          </div>
+          <div style="margin-top: 16px">
+            <strong>SQL généré</strong>
+            <div id="sql-preview" class="sql-preview">Aucune requête générée.</div>
+          </div>
+        </div>
+        <div>
+          <h2 class="panel-title">Requête manuelle</h2>
+          <label for="sql-query">Requête SELECT</label>
+          <textarea
+            id="sql-query"
+            rows="8"
+            placeholder="SELECT * FROM produit LIMIT 50"
+          ></textarea>
+          <h3 class="panel-title" style="margin-top: 16px">Description de la table</h3>
+          <p class="status">
+            Ajoutez une description métier pour aider l'IA à comprendre l'usage de la table.
+          </p>
+          <textarea id="sql-table-description" rows="5" placeholder="Ex: contient les lignes de commandes clients"></textarea>
+          <button id="sql-save-description" style="margin-top: 12px">Enregistrer</button>
+        </div>
+      </section>
+      <section>
+        <h2>Résultat</h2>
+        <div class="controls" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))">
+          <div>
+            <label for="sql-filter">Filtre global</label>
+            <input id="sql-filter" placeholder="Rechercher une valeur..." />
+          </div>
+          <div>
+            <label for="sql-page-size">Taille de page</label>
+            <select id="sql-page-size">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+        <p class="status" id="sql-status">En attente d'une requête.</p>
+        <div class="table-wrapper">
+          <table id="sql-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pagination" style="margin-top: 12px">
+          <button id="sql-prev" class="secondary">Précédent</button>
+          <span id="sql-page-info">Page 1</span>
+          <button id="sql-next" class="secondary">Suivant</button>
+        </div>
+      </section>
+        </main>
+      </div>
+    </div>
+    <script>
+      const table = document.getElementById("sql-table");
+      const tableHead = table.querySelector("thead");
+      const tableBody = table.querySelector("tbody");
+      const statusEl = document.getElementById("sql-status");
+      const filterInput = document.getElementById("sql-filter");
+      const pageSizeSelect = document.getElementById("sql-page-size");
+      const prevBtn = document.getElementById("sql-prev");
+      const nextBtn = document.getElementById("sql-next");
+      const pageInfo = document.getElementById("sql-page-info");
+      const pharmaSelect = document.getElementById("sql-pharma");
+      const tableSelect = document.getElementById("sql-table");
+      const columnsContainer = document.getElementById("sql-columns");
+      const filtersContainer = document.getElementById("sql-filters");
+      const addFilterBtn = document.getElementById("sql-add-filter");
+      const sortContainer = document.getElementById("sql-sorts");
+      const addSortBtn = document.getElementById("sql-add-sort");
+      const generateBtn = document.getElementById("sql-generate");
+      const limitInput = document.getElementById("sql-limit");
+      const queryInput = document.getElementById("sql-query");
+      const tableDescription = document.getElementById("sql-table-description");
+      const saveDescriptionBtn = document.getElementById("sql-save-description");
+      const previewEl = document.getElementById("sql-preview");
+      const refreshBtn = document.getElementById("sql-refresh");
+      const tableBadge = document.getElementById("sql-table-badge");
+
+      let rows = [];
+      let columns = [];
+      let availableColumns = [];
+      let columnFilters = {};
+      let page = 1;
+
+      function normalizeValue(value) {
+        if (value === null || value === undefined) return "";
+        if (typeof value === "object") return JSON.stringify(value);
+        return String(value);
+      }
+
+      function applyFilters() {
+        const globalFilter = filterInput.value.trim().toLowerCase();
+        return rows.filter((row) => {
+          if (globalFilter) {
+            const match = columns.some((col) =>
+              normalizeValue(row[col]).toLowerCase().includes(globalFilter)
+            );
+            if (!match) return false;
+          }
+          return columns.every((col) => {
+            const filterValue = (columnFilters[col] || "").trim().toLowerCase();
+            if (!filterValue) return true;
+            return normalizeValue(row[col]).toLowerCase().includes(filterValue);
+          });
+        });
+      }
+
+      function renderHeader() {
+        tableHead.innerHTML = "";
+        const headerRow = document.createElement("tr");
+        columns.forEach((col) => {
+          const th = document.createElement("th");
+          th.textContent = col;
+          headerRow.appendChild(th);
+        });
+        tableHead.appendChild(headerRow);
+
+        const filterRow = document.createElement("tr");
+        filterRow.className = "filter-row";
+        columns.forEach((col) => {
+          const th = document.createElement("th");
+          const input = document.createElement("input");
+          input.placeholder = "Filtrer";
+          input.value = columnFilters[col] || "";
+          input.addEventListener("input", () => {
+            columnFilters[col] = input.value;
+            page = 1;
+            renderTable();
+          });
+          th.appendChild(input);
+          filterRow.appendChild(th);
+        });
+        tableHead.appendChild(filterRow);
+      }
+
+      function renderTable() {
+        const filtered = applyFilters();
+        const pageSize = parseInt(pageSizeSelect.value, 10);
+        const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+        if (page > totalPages) page = totalPages;
+        const start = (page - 1) * pageSize;
+        const pageRows = filtered.slice(start, start + pageSize);
+
+        tableBody.innerHTML = "";
+        if (!pageRows.length) {
+          const emptyRow = document.createElement("tr");
+          const cell = document.createElement("td");
+          cell.colSpan = Math.max(columns.length, 1);
+          cell.textContent = "Aucun résultat pour ces filtres.";
+          emptyRow.appendChild(cell);
+          tableBody.appendChild(emptyRow);
+        } else {
+          pageRows.forEach((row) => {
+            const tr = document.createElement("tr");
+            columns.forEach((col) => {
+              const td = document.createElement("td");
+              td.textContent = normalizeValue(row[col]);
+              tr.appendChild(td);
+            });
+            tableBody.appendChild(tr);
+          });
+        }
+
+        pageInfo.textContent = `Page ${page} / ${totalPages} (${filtered.length} lignes)`;
+        prevBtn.disabled = page <= 1;
+        nextBtn.disabled = page >= totalPages;
+      }
+
+      function setResults(result) {
+        if (Array.isArray(result)) {
+          rows = result;
+        } else if (result && typeof result === "object") {
+          rows = [result];
+        } else {
+          rows = [];
+        }
+        columns = rows.length ? Object.keys(rows[0]) : [];
+        columnFilters = {};
+        page = 1;
+        renderHeader();
+        renderTable();
+      }
+
+      function buildFilterRow() {
+        const wrapper = document.createElement("div");
+        wrapper.className = "row-grid";
+
+        const columnSelect = document.createElement("select");
+        availableColumns.forEach((col) => {
+          const option = document.createElement("option");
+          option.value = col.name;
+          option.textContent = col.name;
+          columnSelect.appendChild(option);
+        });
+
+        const operatorSelect = document.createElement("select");
+        ["=", "!=", ">", ">=", "<", "<=", "LIKE"].forEach((op) => {
+          const option = document.createElement("option");
+          option.value = op;
+          option.textContent = op;
+          operatorSelect.appendChild(option);
+        });
+
+        const valueInput = document.createElement("input");
+        valueInput.placeholder = "Valeur";
+
+        const removeBtn = document.createElement("button");
+        removeBtn.textContent = "Supprimer";
+        removeBtn.className = "secondary";
+        removeBtn.type = "button";
+        removeBtn.addEventListener("click", () => wrapper.remove());
+
+        wrapper.appendChild(columnSelect);
+        wrapper.appendChild(operatorSelect);
+        wrapper.appendChild(valueInput);
+        wrapper.appendChild(removeBtn);
+        return wrapper;
+      }
+
+      function buildSortRow() {
+        const wrapper = document.createElement("div");
+        wrapper.className = "row-grid";
+
+        const columnSelect = document.createElement("select");
+        availableColumns.forEach((col) => {
+          const option = document.createElement("option");
+          option.value = col.name;
+          option.textContent = col.name;
+          columnSelect.appendChild(option);
+        });
+
+        const directionSelect = document.createElement("select");
+        ["ASC", "DESC"].forEach((dir) => {
+          const option = document.createElement("option");
+          option.value = dir;
+          option.textContent = dir;
+          directionSelect.appendChild(option);
+        });
+
+        const empty = document.createElement("div");
+
+        const removeBtn = document.createElement("button");
+        removeBtn.textContent = "Supprimer";
+        removeBtn.className = "secondary";
+        removeBtn.type = "button";
+        removeBtn.addEventListener("click", () => wrapper.remove());
+
+        wrapper.appendChild(columnSelect);
+        wrapper.appendChild(directionSelect);
+        wrapper.appendChild(empty);
+        wrapper.appendChild(removeBtn);
+        return wrapper;
+      }
+
+      function renderColumns() {
+        columnsContainer.innerHTML = "";
+        availableColumns.forEach((col) => {
+          const label = document.createElement("label");
+          label.style.display = "flex";
+          label.style.gap = "6px";
+          label.style.alignItems = "flex-start";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = col.name;
+          checkbox.checked = true;
+          label.appendChild(checkbox);
+          const text = document.createElement("span");
+          text.style.textAlign = "left";
+          text.textContent = col.data_type ? `${col.name} (${col.data_type})` : col.name;
+          label.appendChild(text);
+          columnsContainer.appendChild(label);
+        });
+      }
+
+      function buildQuery() {
+        const table = tableSelect.value;
+        const selectedColumns = Array.from(columnsContainer.querySelectorAll("input[type='checkbox']"))
+          .filter((checkbox) => checkbox.checked)
+          .map((checkbox) => checkbox.value);
+        const cols = selectedColumns.length ? selectedColumns.join(", ") : "*";
+        const filters = Array.from(filtersContainer.children).map((row) => {
+          const [columnSelect, operatorSelect, valueInput] = row.querySelectorAll("select, input");
+          if (!valueInput || !valueInput.value.trim()) return null;
+          const value = valueInput.value.replace(/'/g, "''");
+          return `${columnSelect.value} ${operatorSelect.value} '${value}'`;
+        }).filter(Boolean);
+        const sorts = Array.from(sortContainer.children).map((row) => {
+          const selects = row.querySelectorAll("select");
+          if (selects.length < 2) return null;
+          return `${selects[0].value} ${selects[1].value}`;
+        }).filter(Boolean);
+        const where = filters.length ? ` WHERE ${filters.join(" AND ")}` : "";
+        const orderBy = sorts.length ? ` ORDER BY ${sorts.join(", ")}` : "";
+        const limitValue = parseInt(limitInput.value, 10);
+        const limitClause = Number.isFinite(limitValue) ? ` LIMIT ${limitValue}` : "";
+        return `SELECT ${cols} FROM ${table}${where}${orderBy}${limitClause}`.trim();
+      }
+
+      async function loadPharmacies() {
+        const response = await fetch("/sql/pharmacies");
+        const data = await response.json();
+        pharmaSelect.innerHTML = "";
+        (data.items || []).forEach((pharma) => {
+          const option = document.createElement("option");
+          option.value = pharma;
+          option.textContent = pharma;
+          pharmaSelect.appendChild(option);
+        });
+        if (!pharmaSelect.value && data.items?.length) {
+          pharmaSelect.value = data.items[0];
+        }
+      }
+
+      async function loadTables() {
+        const pharma = pharmaSelect.value;
+        if (!pharma) return;
+        const response = await fetch(`/sql/tables?pharma_id=${encodeURIComponent(pharma)}`);
+        const data = await response.json();
+        tableSelect.innerHTML = "";
+        (data.tables || []).forEach((table) => {
+          const option = document.createElement("option");
+          option.value = table;
+          option.textContent = table;
+          tableSelect.appendChild(option);
+        });
+        if (tableSelect.options.length) {
+          tableSelect.value = tableSelect.options[0].value;
+        }
+        tableBadge.textContent = tableSelect.value ? `Table: ${tableSelect.value}` : "Aucune table";
+      }
+
+      async function loadColumns() {
+        const pharma = pharmaSelect.value;
+        const table = tableSelect.value;
+        if (!pharma || !table) return;
+        const response = await fetch("/sql/table_info", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pharma_id: pharma, table }),
+        });
+        const data = await response.json();
+        availableColumns = data.columns || [];
+        if (!availableColumns.length) {
+          availableColumns = [{ name: "*", data_type: "" }];
+        }
+        renderColumns();
+        filtersContainer.innerHTML = "";
+        filtersContainer.appendChild(buildFilterRow());
+        sortContainer.innerHTML = "";
+        sortContainer.appendChild(buildSortRow());
+        await loadDescription();
+      }
+
+      async function loadDescription() {
+        const table = tableSelect.value;
+        if (!table) return;
+        const response = await fetch(`/sql/descriptions?table=${encodeURIComponent(table)}`);
+        const data = await response.json();
+        tableDescription.value = data.description || "";
+      }
+
+      async function saveDescription() {
+        const table = tableSelect.value;
+        if (!table) return;
+        await fetch("/sql/descriptions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ table, description: tableDescription.value }),
+        });
+      }
+
+      document.getElementById("sql-run").addEventListener("click", async () => {
+        const pharma = pharmaSelect.value;
+        const sql = queryInput.value;
+        statusEl.textContent = "Requête en cours...";
+        const response = await fetch("/sql/query", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ pharma_id: pharma, sql }),
+        });
+        const data = await response.json();
+        if (!response.ok) {
+          statusEl.textContent = data.detail || "Erreur lors de la requête.";
+          setResults([]);
+          return;
+        }
+        statusEl.textContent = `Requête exécutée (${data.result?.length ?? 0} lignes).`;
+        setResults(data.result || []);
+      });
+
+      addFilterBtn.addEventListener("click", () => {
+        filtersContainer.appendChild(buildFilterRow());
+      });
+
+      addSortBtn.addEventListener("click", () => {
+        sortContainer.appendChild(buildSortRow());
+      });
+
+      generateBtn.addEventListener("click", () => {
+        const sql = buildQuery();
+        queryInput.value = sql;
+        previewEl.textContent = sql || "Aucune requête générée.";
+      });
+
+      saveDescriptionBtn.addEventListener("click", async () => {
+        await saveDescription();
+        statusEl.textContent = "Description enregistrée.";
+      });
+
+      pharmaSelect.addEventListener("change", async () => {
+        await loadTables();
+        await loadColumns();
+      });
+
+      tableSelect.addEventListener("change", async () => {
+        await loadColumns();
+        tableBadge.textContent = tableSelect.value ? `Table: ${tableSelect.value}` : "Aucune table";
+      });
+
+      refreshBtn.addEventListener("click", async () => {
+        await loadTables();
+        await loadColumns();
+      });
+
+      filterInput.addEventListener("input", () => {
+        page = 1;
+        renderTable();
+      });
+
+      pageSizeSelect.addEventListener("change", () => {
+        page = 1;
+        renderTable();
+      });
+
+      prevBtn.addEventListener("click", () => {
+        page = Math.max(1, page - 1);
+        renderTable();
+      });
+
+      nextBtn.addEventListener("click", () => {
+        page += 1;
+        renderTable();
+      });
+
+      (async () => {
+        await loadPharmacies();
+        await loadTables();
+        await loadColumns();
+        previewEl.textContent = "Générez une requête pour voir l'aperçu SQL.";
+      })();
+    </script>
+  </body>
+</html>
