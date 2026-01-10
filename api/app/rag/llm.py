@@ -34,6 +34,8 @@ class OllamaProvider:
 class GPT4AllProvider:
     base_url: str
     model: str
+    last_request: dict[str, object] | None = None
+    last_response: dict[str, object] | None = None
 
     def generate(self, prompt: str) -> str:
         payload = {
@@ -41,9 +43,11 @@ class GPT4AllProvider:
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
         }
+        self.last_request = payload
         response = httpx.post(f"{self.base_url}/v1/chat/completions", json=payload, timeout=30)
         response.raise_for_status()
         data = response.json()
+        self.last_response = data
         choices = data.get("choices", [])
         if not choices:
             return ""

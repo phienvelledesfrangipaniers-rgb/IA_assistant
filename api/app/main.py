@@ -611,6 +611,18 @@ def rag_llm_status() -> dict[str, Any]:
     return {"provider": provider_name, "model": model, "base_url": base_url}
 
 
+@app.get("/rag/llm_logs")
+def rag_llm_logs() -> dict[str, Any]:
+    provider = rag_settings.llm_provider
+    return {
+        "provider": type(provider).__name__,
+        "model": getattr(provider, "model", ""),
+        "base_url": getattr(provider, "base_url", ""),
+        "last_request": getattr(provider, "last_request", None),
+        "last_response": getattr(provider, "last_response", None),
+    }
+
+
 @app.post("/rag/llm_reload")
 def rag_llm_reload() -> dict[str, Any]:
     global rag_settings
