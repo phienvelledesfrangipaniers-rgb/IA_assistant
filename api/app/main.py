@@ -611,6 +611,19 @@ def rag_llm_status() -> dict[str, Any]:
     return {"provider": provider_name, "model": model, "base_url": base_url}
 
 
+@app.post("/rag/llm_reload")
+def rag_llm_reload() -> dict[str, Any]:
+    global rag_settings
+    rag_settings = load_rag_settings()
+    provider = rag_settings.llm_provider
+    return {
+        "status": "ok",
+        "provider": type(provider).__name__,
+        "model": getattr(provider, "model", ""),
+        "base_url": getattr(provider, "base_url", ""),
+    }
+
+
 def run() -> None:
     import uvicorn
 
