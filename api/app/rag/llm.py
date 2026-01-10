@@ -28,3 +28,24 @@ class OllamaProvider:
         response.raise_for_status()
         data = response.json()
         return data.get("response", "")
+
+
+@dataclass
+class GPT4AllProvider:
+    base_url: str
+    model: str
+
+    def generate(self, prompt: str) -> str:
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2,
+        }
+        response = httpx.post(f"{self.base_url}/v1/chat/completions", json=payload, timeout=30)
+        response.raise_for_status()
+        data = response.json()
+        choices = data.get("choices", [])
+        if not choices:
+            return ""
+        message = choices[0].get("message", {})
+        return message.get("content", "")
