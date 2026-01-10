@@ -140,6 +140,13 @@
             </div>
             <pre id="prompt-output">Posez une question pour obtenir une réponse.</pre>
           </section>
+          <section>
+            <h2>Statut LLM</h2>
+            <p>Vérifiez quel modèle est actif côté API.</p>
+            <button id="llm-status-btn">Afficher le statut LLM</button>
+            <button id="llm-reload-btn" class="secondary">Recharger le LLM</button>
+            <pre id="llm-status-output">Statut non chargé.</pre>
+          </section>
         </main>
       </div>
     </div>
@@ -154,6 +161,22 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pharma_id: pharma, question }),
         });
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      });
+
+      document.getElementById("llm-status-btn").addEventListener("click", async () => {
+        const output = document.getElementById("llm-status-output");
+        output.textContent = "Chargement du statut...";
+        const response = await fetch("/rag/llm_status");
+        const data = await response.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      });
+
+      document.getElementById("llm-reload-btn").addEventListener("click", async () => {
+        const output = document.getElementById("llm-status-output");
+        output.textContent = "Rechargement du LLM...";
+        const response = await fetch("/rag/llm_reload", { method: "POST" });
         const data = await response.json();
         output.textContent = JSON.stringify(data, null, 2);
       });
