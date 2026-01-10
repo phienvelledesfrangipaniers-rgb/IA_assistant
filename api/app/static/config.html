@@ -165,7 +165,7 @@
       <section>
         <h2>Importation du catalogue de requêtes</h2>
         <p style="margin: 0 0 8px">
-          Le fichier <code>docs/queries_catalog.md</code> est affiché ici et peut être modifié en direct.
+          Le fichier <code>docs/queries_catalog.json</code> est affiché ici et peut être modifié en direct.
         </p>
         <label for="catalog-content">Contenu du catalogue</label>
         <textarea id="catalog-content" placeholder="Chargement du catalogue..."></textarea>
@@ -248,19 +248,35 @@
 
       async function loadCatalog() {
         catalogStatus.textContent = "Chargement du catalogue...";
-        const response = await fetch("/queries/catalog");
-        const data = await response.json();
-        catalogContent.value = data.content || "";
+        const response = await fetch("/queries/catalog/raw");
+        const text = await response.text();
+        if (!response.ok) {
+          catalogStatus.textContent = text || "Erreur lors du chargement.";
+          return;
+        }
+        catalogContent.value = text || "";
         catalogStatus.textContent = "Catalogue chargé.";
       }
 
       async function saveCatalog() {
         catalogStatus.textContent = "Enregistrement du catalogue...";
-        await fetch("/queries/catalog", {
+        const response = await fetch("/queries/catalog/raw", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ content: catalogContent.value }),
+          headers: { "Content-Type": "text/plain" },
+          body: catalogContent.value,
         });
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          const text = await response.text();
+          catalogStatus.textContent = text || "Erreur lors de l'enregistrement.";
+          return;
+        }
+        if (!response.ok) {
+          catalogStatus.textContent = data.detail || "Erreur lors de l'enregistrement.";
+          return;
+        }
         catalogStatus.textContent = "Catalogue enregistré.";
       }
 
@@ -281,8 +297,19 @@
       });
       catalogExport.addEventListener("click", async () => {
         const response = await fetch("/queries/catalog/export", { method: "POST" });
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          const text = await response.text();
+          catalogStatus.textContent = text || "Erreur lors de l'export.";
+          return;
+        }
         catalogContent.value = data.content || "";
+        if (!response.ok || data.status === "warning") {
+          catalogStatus.textContent = data.detail || "Erreur lors de l'export.";
+          return;
+        }
         catalogStatus.textContent = "Catalogue exporté depuis la base.";
       });
 
