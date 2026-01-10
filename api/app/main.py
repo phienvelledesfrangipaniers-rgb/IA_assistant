@@ -602,6 +602,15 @@ def rag_ask(payload: RagAskPayload) -> dict[str, Any]:
     return result
 
 
+@app.get("/rag/llm_status")
+def rag_llm_status() -> dict[str, Any]:
+    provider = rag_settings.llm_provider
+    provider_name = type(provider).__name__
+    model = getattr(provider, "model", "")
+    base_url = getattr(provider, "base_url", "")
+    return {"provider": provider_name, "model": model, "base_url": base_url}
+
+
 def run() -> None:
     import uvicorn
 
