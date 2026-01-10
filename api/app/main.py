@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import json
 import os
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -274,15 +275,24 @@ def pharmacies_test() -> dict[str, Any]:
 @app.post("/extract/{pharma_id}/{dataset}")
 def trigger_extract(pharma_id: str, dataset: str, payload: ExtractPayload) -> dict[str, Any]:
     extractor_url = os.environ.get("EXTRACTOR_URL")
-    if not extractor_url:
-        raise HTTPException(status_code=500, detail="EXTRACTOR_URL not configured")
-    url = f"{extractor_url}/extract/{pharma_id}/{dataset}"
+    if extractor_url:
+        url = f"{extractor_url}/extract/{pharma_id}/{dataset}"
+        try:
+            response = httpx.post(url, json=payload.model_dump(), timeout=30)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return response.json()
+    hosts = get_pharmacy_hosts()
+    host = hosts.get(pharma_id)
+    if not host:
+        raise HTTPException(status_code=404, detail="Unknown pharmacy")
+    client = DataSnapClient(host)
     try:
-        response = httpx.post(url, json=payload.model_dump(), timeout=30)
-        response.raise_for_status()
-    except httpx.HTTPError as exc:
+        response = client.call("query_thread", {"sql": payload.sql})
+    except DataSnapError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return response.json()
+    return {"pharma_id": pharma_id, "dataset": dataset, "result": response.result}
 
 
 @app.get("/kpi/{pharma_id}/sales")
@@ -529,9 +539,31 @@ def queries_catalog_read() -> dict[str, Any]:
     return {"content": read_catalog_content()}
 
 
+@app.get("/queries/catalog/raw")
+def queries_catalog_read_raw() -> PlainTextResponse:
+    return PlainTextResponse(read_catalog_content())
+
+
 @app.put("/queries/catalog")
-def queries_catalog_write(payload: CatalogPayload) -> dict[str, Any]:
-    write_catalog_content(payload.content)
+def queries_catalog_write(
+    payload: CatalogPayload | list[dict[str, Any]] | str = Body(...)
+) -> dict[str, Any]:
+    if isinstance(payload, CatalogPayload):
+        content = payload.content
+    elif isinstance(payload, list):
+        content = json.dumps(payload, ensure_ascii=False, indent=2)
+    elif isinstance(payload, str):
+        content = payload
+    else:
+        raise HTTPException(status_code=422, detail="Invalid catalog payload")
+    write_catalog_content(content)
+    return {"status": "ok"}
+
+
+@app.put("/queries/catalog/raw")
+async def queries_catalog_write_raw(request: Request) -> dict[str, Any]:
+    content = (await request.body()).decode("utf-8")
+    write_catalog_content(content)
     return {"status": "ok"}
 
 
@@ -548,9 +580,13 @@ def queries_catalog_import() -> dict[str, Any]:
 
 @app.post("/queries/catalog/export")
 def queries_catalog_export() -> dict[str, Any]:
-    content = export_catalog_queries()
-    write_catalog_content(content)
-    return {"status": "ok", "content": content}
+    try:
+        content = export_catalog_queries()
+        write_catalog_content(content)
+        return {"status": "ok", "content": content}
+    except Exception as exc:
+        content = read_catalog_content()
+        return {"status": "warning", "content": content, "detail": str(exc)}
 
 
 @app.get("/queries/{query_id}")
