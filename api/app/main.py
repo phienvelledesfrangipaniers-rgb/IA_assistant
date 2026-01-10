@@ -598,8 +598,45 @@ def query_get(query_id: int) -> dict[str, Any]:
 
 @app.post("/rag/ask")
 def rag_ask(payload: RagAskPayload) -> dict[str, Any]:
-    result = answer_question(payload.pharma_id, payload.question, payload.start, payload.end, rag_settings)
-    return result
+    try:
+        result = answer_question(payload.pharma_id, payload.question, payload.start, payload.end, rag_settings)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"RAG error: {exc}") from exc
+
+
+@app.get("/rag/llm_status")
+def rag_llm_status() -> dict[str, Any]:
+    provider = rag_settings.llm_provider
+    provider_name = type(provider).__name__
+    model = getattr(provider, "model", "")
+    base_url = getattr(provider, "base_url", "")
+    return {"provider": provider_name, "model": model, "base_url": base_url}
+
+
+@app.get("/rag/llm_logs")
+def rag_llm_logs() -> dict[str, Any]:
+    provider = rag_settings.llm_provider
+    return {
+        "provider": type(provider).__name__,
+        "model": getattr(provider, "model", ""),
+        "base_url": getattr(provider, "base_url", ""),
+        "last_request": getattr(provider, "last_request", None),
+        "last_response": getattr(provider, "last_response", None),
+    }
+
+
+@app.post("/rag/llm_reload")
+def rag_llm_reload() -> dict[str, Any]:
+    global rag_settings
+    rag_settings = load_rag_settings()
+    provider = rag_settings.llm_provider
+    return {
+        "status": "ok",
+        "provider": type(provider).__name__,
+        "model": getattr(provider, "model", ""),
+        "base_url": getattr(provider, "base_url", ""),
+    }
 
 
 @app.get("/rag/llm_status")
