@@ -320,10 +320,13 @@ def purchase_changes(pharma_id: str) -> dict[str, Any]:
 @app.post("/rag/index")
 def rag_index(payload: RagIndexPayload) -> dict[str, Any]:
     try:
-        count = index_folder(payload.pharma_id, payload.path, rag_settings)
+        count, errors = index_folder(payload.pharma_id, payload.path, rag_settings)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return {"status": "ok", "indexed": count}
+    response: dict[str, Any] = {"status": "ok", "indexed": count}
+    if errors:
+        response["errors"] = errors
+    return response
 
 
 @app.post("/rag/upload")
@@ -337,8 +340,23 @@ def rag_upload(
         target = upload_dir / upload.filename
         with target.open("wb") as buffer:
             buffer.write(upload.file.read())
-    count = index_folder(pharma_id, str(upload_dir), rag_settings)
-    return {"status": "ok", "indexed": count}
+    count, errors = index_folder(pharma_id, str(upload_dir), rag_settings)
+    response: dict[str, Any] = {"status": "ok", "indexed": count}
+    if errors:
+        response["errors"] = errors
+    return response
+
+
+@app.get("/rag/uploads")
+def rag_uploads(pharma_id: str = Query(...)) -> dict[str, Any]:
+    upload_dir = Path(os.environ.get("RAG_UPLOAD_DIR", "/data/uploads")) / pharma_id
+    if not upload_dir.exists():
+        return {"pharma_id": pharma_id, "items": []}
+    items: list[str] = []
+    for path in sorted(upload_dir.rglob("*")):
+        if path.is_file():
+            items.append(str(path.relative_to(upload_dir)))
+    return {"pharma_id": pharma_id, "items": items}
 
 
 @app.get("/rag/uploads")
