@@ -341,6 +341,18 @@ def rag_upload(
     return {"status": "ok", "indexed": count}
 
 
+@app.get("/rag/uploads")
+def rag_uploads(pharma_id: str = Query(...)) -> dict[str, Any]:
+    upload_dir = Path(os.environ.get("RAG_UPLOAD_DIR", "/data/uploads")) / pharma_id
+    if not upload_dir.exists():
+        return {"pharma_id": pharma_id, "items": []}
+    items: list[str] = []
+    for path in sorted(upload_dir.rglob("*")):
+        if path.is_file():
+            items.append(str(path.relative_to(upload_dir)))
+    return {"pharma_id": pharma_id, "items": items}
+
+
 @app.post("/sql/query")
 def sql_query(payload: SqlQueryPayload) -> dict[str, Any]:
     sql_text = payload.sql.strip()
@@ -603,40 +615,6 @@ def rag_ask(payload: RagAskPayload) -> dict[str, Any]:
         return result
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"RAG error: {exc}") from exc
-
-
-@app.get("/rag/llm_status")
-def rag_llm_status() -> dict[str, Any]:
-    provider = rag_settings.llm_provider
-    provider_name = type(provider).__name__
-    model = getattr(provider, "model", "")
-    base_url = getattr(provider, "base_url", "")
-    return {"provider": provider_name, "model": model, "base_url": base_url}
-
-
-@app.get("/rag/llm_logs")
-def rag_llm_logs() -> dict[str, Any]:
-    provider = rag_settings.llm_provider
-    return {
-        "provider": type(provider).__name__,
-        "model": getattr(provider, "model", ""),
-        "base_url": getattr(provider, "base_url", ""),
-        "last_request": getattr(provider, "last_request", None),
-        "last_response": getattr(provider, "last_response", None),
-    }
-
-
-@app.post("/rag/llm_reload")
-def rag_llm_reload() -> dict[str, Any]:
-    global rag_settings
-    rag_settings = load_rag_settings()
-    provider = rag_settings.llm_provider
-    return {
-        "status": "ok",
-        "provider": type(provider).__name__,
-        "model": getattr(provider, "model", ""),
-        "base_url": getattr(provider, "base_url", ""),
-    }
 
 
 @app.get("/rag/llm_status")
