@@ -141,8 +141,10 @@
             </div>
             <div style="margin-top: 12px">
               <button id="rag-index-btn">Indexer</button>
+              <button id="rag-list-btn" class="secondary">Lister les fichiers uploadés</button>
             </div>
             <pre id="rag-output">Indexez des documents.</pre>
+            <pre id="rag-files-output">Aucun fichier listé.</pre>
           </section>
 
           <section>
@@ -166,8 +168,44 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pharma_id: pharma, path }),
         });
-        const data = await response.json();
+        const rawBody = await response.text();
+        let data = {};
+        if (rawBody) {
+          try {
+            data = JSON.parse(rawBody);
+          } catch (error) {
+            output.textContent = rawBody || "Erreur lors de l'indexation.";
+            return;
+          }
+        }
+        if (!response.ok) {
+          output.textContent = data.detail || "Erreur lors de l'indexation.";
+          return;
+        }
         output.textContent = JSON.stringify(data, null, 2);
+      });
+
+      document.getElementById("rag-list-btn").addEventListener("click", async () => {
+        const pharma = document.getElementById("rag-pharma").value;
+        const output = document.getElementById("rag-files-output");
+        output.textContent = "Chargement des fichiers...";
+        const response = await fetch(`/rag/uploads?pharma_id=${encodeURIComponent(pharma)}`);
+        const rawBody = await response.text();
+        let data = {};
+        if (rawBody) {
+          try {
+            data = JSON.parse(rawBody);
+          } catch (error) {
+            output.textContent = rawBody || "Erreur lors du chargement.";
+            return;
+          }
+        }
+        if (!response.ok) {
+          output.textContent = data.detail || "Erreur lors du chargement.";
+          return;
+        }
+        const items = data.items || [];
+        output.textContent = items.length ? items.join("\n") : "Aucun fichier trouvé.";
       });
 
       document.getElementById("rag-upload-btn").addEventListener("click", async () => {
@@ -186,7 +224,20 @@
           method: "POST",
           body: formData,
         });
-        const data = await response.json();
+        const rawBody = await response.text();
+        let data = {};
+        if (rawBody) {
+          try {
+            data = JSON.parse(rawBody);
+          } catch (error) {
+            output.textContent = rawBody || "Erreur lors de l'upload.";
+            return;
+          }
+        }
+        if (!response.ok) {
+          output.textContent = data.detail || "Erreur lors de l'upload.";
+          return;
+        }
         output.textContent = JSON.stringify(data, null, 2);
       });
     </script>
