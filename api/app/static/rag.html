@@ -168,7 +168,18 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pharma_id: pharma, path }),
         });
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          const text = await response.text();
+          output.textContent = text || "Erreur lors de l'indexation.";
+          return;
+        }
+        if (!response.ok) {
+          output.textContent = data.detail || "Erreur lors de l'indexation.";
+          return;
+        }
         output.textContent = JSON.stringify(data, null, 2);
       });
 
@@ -177,7 +188,18 @@
         const output = document.getElementById("rag-files-output");
         output.textContent = "Chargement des fichiers...";
         const response = await fetch(`/rag/uploads?pharma_id=${encodeURIComponent(pharma)}`);
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          const text = await response.text();
+          output.textContent = text || "Erreur lors du chargement.";
+          return;
+        }
+        if (!response.ok) {
+          output.textContent = data.detail || "Erreur lors du chargement.";
+          return;
+        }
         const items = data.items || [];
         output.textContent = items.length ? items.join("\n") : "Aucun fichier trouvé.";
       });
@@ -198,7 +220,18 @@
           method: "POST",
           body: formData,
         });
-        const data = await response.json();
+        let data = {};
+        try {
+          data = await response.json();
+        } catch (error) {
+          const text = await response.text();
+          output.textContent = text || "Erreur lors de l'upload.";
+          return;
+        }
+        if (!response.ok) {
+          output.textContent = data.detail || "Erreur lors de l'upload.";
+          return;
+        }
         output.textContent = JSON.stringify(data, null, 2);
       });
     </script>

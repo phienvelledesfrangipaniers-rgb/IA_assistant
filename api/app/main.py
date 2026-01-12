@@ -359,18 +359,6 @@ def rag_uploads(pharma_id: str = Query(...)) -> dict[str, Any]:
     return {"pharma_id": pharma_id, "items": items}
 
 
-@app.get("/rag/uploads")
-def rag_uploads(pharma_id: str = Query(...)) -> dict[str, Any]:
-    upload_dir = Path(os.environ.get("RAG_UPLOAD_DIR", "/data/uploads")) / pharma_id
-    if not upload_dir.exists():
-        return {"pharma_id": pharma_id, "items": []}
-    items: list[str] = []
-    for path in sorted(upload_dir.rglob("*")):
-        if path.is_file():
-            items.append(str(path.relative_to(upload_dir)))
-    return {"pharma_id": pharma_id, "items": items}
-
-
 @app.post("/sql/query")
 def sql_query(payload: SqlQueryPayload) -> dict[str, Any]:
     sql_text = payload.sql.strip()
