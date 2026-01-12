@@ -1,13 +1,14 @@
 from __future__ import annotations
 
+import json
 import os
 from datetime import date
 from pathlib import Path
 from typing import Any
 
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse
+from fastapi import Body, FastAPI, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -274,15 +275,24 @@ def pharmacies_test() -> dict[str, Any]:
 @app.post("/extract/{pharma_id}/{dataset}")
 def trigger_extract(pharma_id: str, dataset: str, payload: ExtractPayload) -> dict[str, Any]:
     extractor_url = os.environ.get("EXTRACTOR_URL")
-    if not extractor_url:
-        raise HTTPException(status_code=500, detail="EXTRACTOR_URL not configured")
-    url = f"{extractor_url}/extract/{pharma_id}/{dataset}"
+    if extractor_url:
+        url = f"{extractor_url}/extract/{pharma_id}/{dataset}"
+        try:
+            response = httpx.post(url, json=payload.model_dump(), timeout=30)
+            response.raise_for_status()
+        except httpx.HTTPError as exc:
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
+        return response.json()
+    hosts = get_pharmacy_hosts()
+    host = hosts.get(pharma_id)
+    if not host:
+        raise HTTPException(status_code=404, detail="Unknown pharmacy")
+    client = DataSnapClient(host)
     try:
-        response = httpx.post(url, json=payload.model_dump(), timeout=30)
-        response.raise_for_status()
-    except httpx.HTTPError as exc:
+        response = client.call("query_thread", {"sql": payload.sql})
+    except DataSnapError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
-    return response.json()
+    return {"pharma_id": pharma_id, "dataset": dataset, "result": response.result}
 
 
 @app.get("/kpi/{pharma_id}/sales")
@@ -310,10 +320,13 @@ def purchase_changes(pharma_id: str) -> dict[str, Any]:
 @app.post("/rag/index")
 def rag_index(payload: RagIndexPayload) -> dict[str, Any]:
     try:
-        count = index_folder(payload.pharma_id, payload.path, rag_settings)
+        count, errors = index_folder(payload.pharma_id, payload.path, rag_settings)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return {"status": "ok", "indexed": count}
+    response: dict[str, Any] = {"status": "ok", "indexed": count}
+    if errors:
+        response["errors"] = errors
+    return response
 
 
 @app.post("/rag/upload")
@@ -327,8 +340,23 @@ def rag_upload(
         target = upload_dir / upload.filename
         with target.open("wb") as buffer:
             buffer.write(upload.file.read())
-    count = index_folder(pharma_id, str(upload_dir), rag_settings)
-    return {"status": "ok", "indexed": count}
+    count, errors = index_folder(pharma_id, str(upload_dir), rag_settings)
+    response: dict[str, Any] = {"status": "ok", "indexed": count}
+    if errors:
+        response["errors"] = errors
+    return response
+
+
+@app.get("/rag/uploads")
+def rag_uploads(pharma_id: str = Query(...)) -> dict[str, Any]:
+    upload_dir = Path(os.environ.get("RAG_UPLOAD_DIR", "/data/uploads")) / pharma_id
+    if not upload_dir.exists():
+        return {"pharma_id": pharma_id, "items": []}
+    items: list[str] = []
+    for path in sorted(upload_dir.rglob("*")):
+        if path.is_file():
+            items.append(str(path.relative_to(upload_dir)))
+    return {"pharma_id": pharma_id, "items": items}
 
 
 @app.post("/sql/query")
@@ -529,9 +557,31 @@ def queries_catalog_read() -> dict[str, Any]:
     return {"content": read_catalog_content()}
 
 
+@app.get("/queries/catalog/raw")
+def queries_catalog_read_raw() -> PlainTextResponse:
+    return PlainTextResponse(read_catalog_content())
+
+
 @app.put("/queries/catalog")
-def queries_catalog_write(payload: CatalogPayload) -> dict[str, Any]:
-    write_catalog_content(payload.content)
+def queries_catalog_write(
+    payload: CatalogPayload | list[dict[str, Any]] | str = Body(...)
+) -> dict[str, Any]:
+    if isinstance(payload, CatalogPayload):
+        content = payload.content
+    elif isinstance(payload, list):
+        content = json.dumps(payload, ensure_ascii=False, indent=2)
+    elif isinstance(payload, str):
+        content = payload
+    else:
+        raise HTTPException(status_code=422, detail="Invalid catalog payload")
+    write_catalog_content(content)
+    return {"status": "ok"}
+
+
+@app.put("/queries/catalog/raw")
+async def queries_catalog_write_raw(request: Request) -> dict[str, Any]:
+    content = (await request.body()).decode("utf-8")
+    write_catalog_content(content)
     return {"status": "ok"}
 
 
@@ -548,9 +598,13 @@ def queries_catalog_import() -> dict[str, Any]:
 
 @app.post("/queries/catalog/export")
 def queries_catalog_export() -> dict[str, Any]:
-    content = export_catalog_queries()
-    write_catalog_content(content)
-    return {"status": "ok", "content": content}
+    try:
+        content = export_catalog_queries()
+        write_catalog_content(content)
+        return {"status": "ok", "content": content}
+    except Exception as exc:
+        content = read_catalog_content()
+        return {"status": "warning", "content": content, "detail": str(exc)}
 
 
 @app.get("/queries/{query_id}")
@@ -562,8 +616,45 @@ def query_get(query_id: int) -> dict[str, Any]:
 
 @app.post("/rag/ask")
 def rag_ask(payload: RagAskPayload) -> dict[str, Any]:
-    result = answer_question(payload.pharma_id, payload.question, payload.start, payload.end, rag_settings)
-    return result
+    try:
+        result = answer_question(payload.pharma_id, payload.question, payload.start, payload.end, rag_settings)
+        return result
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"RAG error: {exc}") from exc
+
+
+@app.get("/rag/llm_status")
+def rag_llm_status() -> dict[str, Any]:
+    provider = rag_settings.llm_provider
+    provider_name = type(provider).__name__
+    model = getattr(provider, "model", "")
+    base_url = getattr(provider, "base_url", "")
+    return {"provider": provider_name, "model": model, "base_url": base_url}
+
+
+@app.get("/rag/llm_logs")
+def rag_llm_logs() -> dict[str, Any]:
+    provider = rag_settings.llm_provider
+    return {
+        "provider": type(provider).__name__,
+        "model": getattr(provider, "model", ""),
+        "base_url": getattr(provider, "base_url", ""),
+        "last_request": getattr(provider, "last_request", None),
+        "last_response": getattr(provider, "last_response", None),
+    }
+
+
+@app.post("/rag/llm_reload")
+def rag_llm_reload() -> dict[str, Any]:
+    global rag_settings
+    rag_settings = load_rag_settings()
+    provider = rag_settings.llm_provider
+    return {
+        "status": "ok",
+        "provider": type(provider).__name__,
+        "model": getattr(provider, "model", ""),
+        "base_url": getattr(provider, "base_url", ""),
+    }
 
 
 def run() -> None:

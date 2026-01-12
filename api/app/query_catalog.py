@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import re
 from pathlib import Path
@@ -7,7 +8,7 @@ from typing import Any
 
 from .query_store import list_queries, replace_queries
 
-DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[2] / "docs" / "queries_catalog.md"
+DEFAULT_CATALOG_PATH = Path(__file__).resolve().parents[2] / "docs" / "queries_catalog.json"
 CATALOG_PATH = Path(os.environ.get("QUERIES_CATALOG_PATH", str(DEFAULT_CATALOG_PATH)))
 
 
@@ -26,42 +27,38 @@ def write_catalog_content(content: str) -> None:
     CATALOG_PATH.write_text(content, encoding="utf-8")
 
 
+def _extract_description_tags(description_line: str) -> tuple[str, list[str]]:
+    tags = re.findall(r"#([A-Za-z0-9_]+)", description_line)
+    description = re.sub(r"\s+#\S+", "", description_line).strip()
+    return description, tags
+
+
+def _normalize_entry(entry: dict[str, Any]) -> dict[str, Any]:
+    raw_description = entry.get("descriptif") or entry.get("description") or ""
+    sql_text = entry.get("requete") or entry.get("sql_text") or ""
+    source = entry.get("fichier") or entry.get("source") or ""
+    tags = entry.get("tags")
+    if not isinstance(tags, list):
+        tags = None
+    description, extracted_tags = _extract_description_tags(raw_description)
+    if tags is None:
+        tags = extracted_tags
+    return {
+        "description": description,
+        "tags": tags,
+        "sql_text": sql_text,
+        "source": source,
+    }
+
+
 def parse_catalog(content: str) -> list[dict[str, Any]]:
-    entries: list[dict[str, Any]] = []
-    lines = content.splitlines()
-    current_source = ""
-    idx = 0
-    while idx < len(lines):
-        line = lines[idx].strip()
-        if line.startswith("## `") and line.endswith("`"):
-            current_source = line[4:-1]
-            idx += 1
-            continue
-        if line.startswith("- "):
-            description_line = line[2:].strip()
-            tags = re.findall(r"#([A-Za-z0-9_]+)", description_line)
-            description = re.sub(r"\s+#\S+", "", description_line).strip()
-            sql_text = ""
-            j = idx + 1
-            while j < len(lines) and "```sql" not in lines[j]:
-                j += 1
-            if j < len(lines) and "```sql" in lines[j]:
-                j += 1
-                sql_lines: list[str] = []
-                while j < len(lines) and "```" not in lines[j]:
-                    sql_lines.append(lines[j])
-                    j += 1
-                sql_text = "\n".join(sql_lines).strip()
-                idx = j
-            entries.append(
-                {
-                    "description": description,
-                    "tags": tags,
-                    "sql_text": sql_text,
-                    "source": current_source,
-                }
-            )
-        idx += 1
+    try:
+        payload = json.loads(content) if content.strip() else []
+    except json.JSONDecodeError:
+        return []
+    if not isinstance(payload, list):
+        return []
+    entries = [_normalize_entry(item) for item in payload if isinstance(item, dict)]
     return [entry for entry in entries if entry.get("sql_text")]
 
 
@@ -89,30 +86,20 @@ def import_catalog_queries(content: str) -> list[dict[str, Any]]:
 
 
 def render_catalog(queries: list[dict[str, Any]]) -> str:
-    lines = [
-        "# Requêtes SQL passées à `requete()`",
-        "",
-        "Ce fichier liste toutes les requêtes SQL passées à la fonction `requete` (ou `$win->requete()` / "
-        "`$this->requete()`), avec une courte description et des hashtags contenant les noms de tables utilisées.",
-        "",
-    ]
-    sources: dict[str, list[dict[str, Any]]] = {}
+    payload: list[dict[str, Any]] = []
     for query in queries:
-        sources.setdefault(query.get("source") or "source", []).append(query)
-    for source in sorted(sources):
-        lines.append(f"## `{source}`")
-        for query in sources[source]:
-            description = query.get("description") or "Requête"
-            tags = " ".join(f"#{tag}" for tag in (query.get("tags") or []))
-            tag_suffix = f" {tags}" if tags else ""
-            lines.append(f"- {description}{tag_suffix}")
-            lines.append("  ```sql")
-            sql_text = (query.get("sql_text") or "").strip()
-            for sql_line in sql_text.splitlines():
-                lines.append(f"  {sql_line}")
-            lines.append("  ```")
-        lines.append("")
-    return "\n".join(lines).rstrip() + "\n"
+        description = query.get("description") or "Requête"
+        tags = query.get("tags") or []
+        tag_suffix = " ".join(f"#{tag}" for tag in tags)
+        descriptif = f"{description} {tag_suffix}".strip()
+        payload.append(
+            {
+                "descriptif": descriptif,
+                "requete": (query.get("sql_text") or "").strip(),
+                "fichier": query.get("source") or "source",
+            }
+        )
+    return json.dumps(payload, ensure_ascii=False, indent=2) + "\n"
 
 
 def export_catalog_queries() -> str:
