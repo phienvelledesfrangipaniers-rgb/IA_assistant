@@ -13,7 +13,7 @@ from ..db import get_connection
 from ..kpi import build_kpi_summary
 from ..table_descriptions import list_table_descriptions
 from .embeddings import embed_text, vector_literal
-from .llm import LLMProvider, NoLLMProvider, OllamaProvider
+from .llm import GPT4AllProvider, LLMProvider, NoLLMProvider, OllamaProvider
 
 
 @dataclass
@@ -27,12 +27,17 @@ def load_rag_settings() -> RagSettings:
     embedding_dim = int(os.environ.get("RAG_EMBEDDING_DIM", "128"))
     chunk_size = int(os.environ.get("RAG_CHUNK_SIZE", "800"))
 
-    ollama_url = os.environ.get("OLLAMA_URL")
-    ollama_model = os.environ.get("OLLAMA_MODEL")
-    if ollama_url and ollama_model:
-        provider: LLMProvider = OllamaProvider(ollama_url, ollama_model)
+    gpt4all_url = os.environ.get("GPT4ALL_URL", "http://192.168.0.100:4891")
+    gpt4all_model = os.environ.get("GPT4ALL_MODEL")
+    if gpt4all_url and gpt4all_model:
+        provider: LLMProvider = GPT4AllProvider(gpt4all_url, gpt4all_model)
     else:
-        provider = NoLLMProvider()
+        ollama_url = os.environ.get("OLLAMA_URL")
+        ollama_model = os.environ.get("OLLAMA_MODEL")
+        if ollama_url and ollama_model:
+            provider = OllamaProvider(ollama_url, ollama_model)
+        else:
+            provider = NoLLMProvider()
 
     return RagSettings(
         embedding_dim=embedding_dim,
@@ -71,18 +76,23 @@ def _chunk_text(text: str, chunk_size: int) -> Iterable[str]:
         yield " ".join(buffer)
 
 
-def index_folder(pharma_id: str, path: str, settings: RagSettings) -> int:
+def index_folder(pharma_id: str, path: str, settings: RagSettings) -> tuple[int, list[dict[str, str]]]:
     base = Path(path)
     if not base.exists():
         raise FileNotFoundError(path)
 
     inserted = 0
+    errors: list[dict[str, str]] = []
     with get_connection() as conn:
         with conn.cursor() as cur:
             for file_path in base.rglob("*"):
                 if file_path.suffix.lower() not in {".txt", ".pdf", ".docx"}:
                     continue
-                content = _read_text(file_path)
+                try:
+                    content = _read_text(file_path)
+                except Exception as exc:
+                    errors.append({"path": str(file_path), "error": str(exc)})
+                    continue
                 if not content:
                     continue
                 for chunk in _chunk_text(content, settings.chunk_size):
@@ -101,7 +111,7 @@ def index_folder(pharma_id: str, path: str, settings: RagSettings) -> int:
                         ),
                     )
                     inserted += 1
-    return inserted
+    return inserted, errors
 
 
 def search_documents(pharma_id: str, question: str, settings: RagSettings) -> list[dict[str, str]]:

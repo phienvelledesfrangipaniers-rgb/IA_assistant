@@ -141,8 +141,10 @@
             </div>
             <div style="margin-top: 12px">
               <button id="rag-index-btn">Indexer</button>
+              <button id="rag-list-btn" class="secondary">Lister les fichiers uploadés</button>
             </div>
             <pre id="rag-output">Indexez des documents.</pre>
+            <pre id="rag-files-output">Aucun fichier listé.</pre>
           </section>
 
           <section>
@@ -168,6 +170,16 @@
         });
         const data = await response.json();
         output.textContent = JSON.stringify(data, null, 2);
+      });
+
+      document.getElementById("rag-list-btn").addEventListener("click", async () => {
+        const pharma = document.getElementById("rag-pharma").value;
+        const output = document.getElementById("rag-files-output");
+        output.textContent = "Chargement des fichiers...";
+        const response = await fetch(`/rag/uploads?pharma_id=${encodeURIComponent(pharma)}`);
+        const data = await response.json();
+        const items = data.items || [];
+        output.textContent = items.length ? items.join("\n") : "Aucun fichier trouvé.";
       });
 
       document.getElementById("rag-upload-btn").addEventListener("click", async () => {
