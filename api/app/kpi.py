@@ -28,8 +28,8 @@ def get_sales_kpi(pharma_id: str, start: date | None, end: date | None) -> list[
     SELECT sales_date, gross_revenue, estimated_margin, ticket_count
     FROM mart.sales_daily
     WHERE pharma_id = %s
-    AND (%s IS NULL OR sales_date >= %s)
-    AND (%s IS NULL OR sales_date <= %s)
+    AND (%s::date IS NULL OR sales_date >= %s::date)
+    AND (%s::date IS NULL OR sales_date <= %s::date)
     ORDER BY sales_date DESC;
     """
     with get_connection() as conn:

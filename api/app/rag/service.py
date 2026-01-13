@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from datetime import date
@@ -100,14 +101,14 @@ def index_folder(pharma_id: str, path: str, settings: RagSettings) -> tuple[int,
                     cur.execute(
                         """
                         INSERT INTO rag.documents (pharma_id, source_path, content, embedding, metadata)
-                        VALUES (%s, %s, %s, %s::vector, %s)
+                        VALUES (%s, %s, %s, %s::vector, %s::jsonb)
                         """,
                         (
                             pharma_id,
                             str(file_path),
                             chunk,
                             vector_literal(vector),
-                            {"filename": file_path.name},
+                            json.dumps({"filename": file_path.name}),
                         ),
                     )
                     inserted += 1
