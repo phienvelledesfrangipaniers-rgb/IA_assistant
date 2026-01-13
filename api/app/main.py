@@ -344,10 +344,10 @@ def rag_upload(
     try:
         count, errors = index_folder(pharma_id, str(upload_dir), rag_settings)
     except Exception as exc:
-        error_details = "\n".join(
-            [f"{exc.__class__.__name__}: {exc}", traceback.format_exc()]
+        error_details = "".join(
+            traceback.format_exception(type(exc), exc, exc.__traceback__)
         )
-        raise HTTPException(status_code=500, detail=error_details) from exc
+        return PlainTextResponse(error_details, status_code=500)
     response: dict[str, Any] = {"status": "ok", "indexed": count}
     if errors:
         response["errors"] = errors
