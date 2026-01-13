@@ -172,8 +172,22 @@
       </div>
     </div>
     <script>
+      const formatDetail = (detail) => {
+        if (!detail) {
+          return "";
+        }
+        if (typeof detail === "string") {
+          return detail;
+        }
+        try {
+          return JSON.stringify(detail, null, 2);
+        } catch (error) {
+          return String(detail);
+        }
+      };
+
       const toErrorMessage = (response, data, rawBody, fallback) => {
-        const detail = data?.detail || rawBody;
+        const detail = formatDetail(data?.detail) || rawBody;
         if (detail) {
           return detail;
         }
@@ -185,7 +199,8 @@
       };
 
       const toUploadErrorMessage = (response, data, rawBody, fallback) => {
-        const detail = data?.detail || rawBody || "Aucun corps de réponse.";
+        const detail =
+          formatDetail(data?.detail) || rawBody || "Aucun corps de réponse.";
         if (response) {
           const statusText = response.statusText ? ` ${response.statusText}` : "";
           return `Erreur ${response.status}${statusText}.\nDétails: ${detail}`;
