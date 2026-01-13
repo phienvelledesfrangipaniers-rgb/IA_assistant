@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import traceback
 from datetime import date
 from pathlib import Path
 from typing import Any
@@ -340,7 +341,13 @@ def rag_upload(
         target = upload_dir / upload.filename
         with target.open("wb") as buffer:
             buffer.write(upload.file.read())
-    count, errors = index_folder(pharma_id, str(upload_dir), rag_settings)
+    try:
+        count, errors = index_folder(pharma_id, str(upload_dir), rag_settings)
+    except Exception as exc:
+        error_details = "\n".join(
+            [f"{exc.__class__.__name__}: {exc}", traceback.format_exc()]
+        )
+        raise HTTPException(status_code=500, detail=error_details) from exc
     response: dict[str, Any] = {"status": "ok", "indexed": count}
     if errors:
         response["errors"] = errors
