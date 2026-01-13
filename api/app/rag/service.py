@@ -8,6 +8,7 @@ from typing import Iterable
 
 from docx import Document
 from pypdf import PdfReader
+from psycopg.types.json import Json
 
 from ..db import get_connection
 from ..kpi import build_kpi_summary
@@ -107,7 +108,7 @@ def index_folder(pharma_id: str, path: str, settings: RagSettings) -> tuple[int,
                             str(file_path),
                             chunk,
                             vector_literal(vector),
-                            {"filename": file_path.name},
+                            Json({"filename": file_path.name}),
                         ),
                     )
                     inserted += 1
