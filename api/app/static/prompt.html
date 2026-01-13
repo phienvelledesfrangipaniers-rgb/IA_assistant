@@ -96,6 +96,64 @@
         overflow-x: auto;
         font-size: 12px;
       }
+      .chat-shell {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .chat-window {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 16px;
+        min-height: 320px;
+        max-height: 420px;
+        overflow-y: auto;
+        border: 1px solid #e5e7eb;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .chat-bubble {
+        max-width: 80%;
+        padding: 10px 14px;
+        border-radius: 14px;
+        font-size: 14px;
+        line-height: 1.4;
+        white-space: pre-wrap;
+      }
+      .chat-bubble.user {
+        align-self: flex-end;
+        background: #2563eb;
+        color: #fff;
+        border-bottom-right-radius: 4px;
+      }
+      .chat-bubble.assistant {
+        align-self: flex-start;
+        background: #fff;
+        color: #1f2937;
+        border: 1px solid #e5e7eb;
+        border-bottom-left-radius: 4px;
+      }
+      .chat-meta {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      .chat-inputs {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .chat-row {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+      }
+      .chat-row textarea {
+        flex: 1;
+      }
+      .chat-row button {
+        white-space: nowrap;
+      }
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -127,18 +185,31 @@
         </header>
         <main>
           <section>
-            <div class="grid">
-              <div>
-                <label for="prompt-pharma">Pharmacie</label>
-                <input id="prompt-pharma" placeholder="frang" value="frang" />
+            <div class="chat-shell">
+              <div class="grid">
+                <div>
+                  <label for="prompt-pharma">Pharmacie</label>
+                  <input id="prompt-pharma" placeholder="frang" value="frang" />
+                </div>
+              </div>
+              <div class="chat-window" id="prompt-chat">
+                <div class="chat-bubble assistant">
+                  Bonjour ! Posez une question pour obtenir une réponse.
+                </div>
+              </div>
+              <div class="chat-inputs">
+                <label for="prompt-question">Question</label>
+                <div class="chat-row">
+                  <textarea
+                    id="prompt-question"
+                    rows="3"
+                    placeholder="Quels sont les top ventes ?"
+                  ></textarea>
+                  <button id="prompt-ask">Poser la question</button>
+                </div>
+                <span class="chat-meta" id="prompt-status"></span>
               </div>
             </div>
-            <div style="margin-top: 12px">
-              <label for="prompt-question">Question</label>
-              <textarea id="prompt-question" rows="4" placeholder="Quels sont les top ventes ?"></textarea>
-              <button id="prompt-ask" style="margin-top: 8px">Poser la question</button>
-            </div>
-            <pre id="prompt-output">Posez une question pour obtenir une réponse.</pre>
           </section>
           <section>
             <h2>Statut LLM</h2>
@@ -152,18 +223,64 @@
       </div>
     </div>
     <script>
+      const chatWindow = document.getElementById("prompt-chat");
+      const statusLine = document.getElementById("prompt-status");
+
+      const appendBubble = (text, role) => {
+        const bubble = document.createElement("div");
+        bubble.className = `chat-bubble ${role}`;
+        bubble.textContent = text;
+        chatWindow.appendChild(bubble);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return bubble;
+      };
+
+      const formatAnswer = (data) => {
+        if (!data) {
+          return "Aucune réponse reçue.";
+        }
+        if (typeof data === "string") {
+          return data;
+        }
+        if (data.answer) {
+          return data.answer;
+        }
+        return JSON.stringify(data, null, 2);
+      };
+
       document.getElementById("prompt-ask").addEventListener("click", async () => {
         const pharma = document.getElementById("prompt-pharma").value;
-        const question = document.getElementById("prompt-question").value;
-        const output = document.getElementById("prompt-output");
-        output.textContent = "Analyse en cours...";
+        const question = document.getElementById("prompt-question").value.trim();
+        if (!question) {
+          statusLine.textContent = "Veuillez saisir une question.";
+          return;
+        }
+        statusLine.textContent = "Analyse en cours...";
+        appendBubble(question, "user");
+        const assistantBubble = appendBubble("Analyse en cours...", "assistant");
         const response = await fetch("/rag/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ pharma_id: pharma, question }),
         });
-        const data = await response.json();
-        output.textContent = JSON.stringify(data, null, 2);
+        const rawBody = await response.text();
+        let data = null;
+        if (rawBody) {
+          try {
+            data = JSON.parse(rawBody);
+          } catch (error) {
+            assistantBubble.textContent = rawBody;
+            statusLine.textContent = "Réponse reçue (texte brut).";
+            return;
+          }
+        }
+        if (!response.ok) {
+          assistantBubble.textContent = data?.detail || rawBody || "Erreur inconnue.";
+          statusLine.textContent = "Erreur lors de la requête.";
+          return;
+        }
+        assistantBubble.textContent = formatAnswer(data);
+        statusLine.textContent = "Réponse prête.";
       });
 
       document.getElementById("llm-status-btn").addEventListener("click", async () => {
