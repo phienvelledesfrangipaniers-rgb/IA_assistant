@@ -89,6 +89,19 @@
         font-weight: 600;
         cursor: pointer;
       }
+      .error-banner {
+        margin-top: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        background: #fee2e2;
+        color: #991b1b;
+        font-size: 13px;
+        display: none;
+        white-space: pre-wrap;
+      }
+      .error-banner.visible {
+        display: block;
+      }
       pre {
         background: #0f172a;
         color: #e2e8f0;
@@ -152,12 +165,49 @@
             <label for="rag-files">Sélectionnez des fichiers (PDF, DOCX, TXT)</label>
             <input id="rag-files" type="file" multiple />
             <button id="rag-upload-btn" style="margin-top: 8px">Uploader et indexer</button>
+            <div id="rag-upload-error" class="error-banner" role="alert"></div>
             <pre id="rag-upload-output">Aucun upload.</pre>
           </section>
         </main>
       </div>
     </div>
     <script>
+      const formatDetail = (detail) => {
+        if (!detail) {
+          return "";
+        }
+        if (typeof detail === "string") {
+          return detail;
+        }
+        try {
+          return JSON.stringify(detail, null, 2);
+        } catch (error) {
+          return String(detail);
+        }
+      };
+
+      const toErrorMessage = (response, data, rawBody, fallback) => {
+        const detail = formatDetail(data?.detail) || rawBody;
+        if (detail) {
+          return detail;
+        }
+        if (response) {
+          const statusText = response.statusText ? ` ${response.statusText}` : "";
+          return `Erreur ${response.status}${statusText}.`;
+        }
+        return fallback;
+      };
+
+      const toUploadErrorMessage = (response, data, rawBody, fallback) => {
+        const detail =
+          formatDetail(data?.detail) || rawBody || "Aucun corps de réponse.";
+        if (response) {
+          const statusText = response.statusText ? ` ${response.statusText}` : "";
+          return `Erreur ${response.status}${statusText}.\nDétails: ${detail}`;
+        }
+        return `${fallback}\nDétails: ${detail}`;
+      };
+
       document.getElementById("rag-index-btn").addEventListener("click", async () => {
         const pharma = document.getElementById("rag-pharma").value;
         const path = document.getElementById("rag-path").value;
@@ -174,12 +224,12 @@
           try {
             data = JSON.parse(rawBody);
           } catch (error) {
-            output.textContent = rawBody || "Erreur lors de l'indexation.";
+            output.textContent = toErrorMessage(response, data, rawBody, "Erreur lors de l'indexation.");
             return;
           }
         }
         if (!response.ok) {
-          output.textContent = data.detail || "Erreur lors de l'indexation.";
+          output.textContent = toErrorMessage(response, data, rawBody, "Erreur lors de l'indexation.");
           return;
         }
         output.textContent = JSON.stringify(data, null, 2);
@@ -196,12 +246,12 @@
           try {
             data = JSON.parse(rawBody);
           } catch (error) {
-            output.textContent = rawBody || "Erreur lors du chargement.";
+            output.textContent = toErrorMessage(response, data, rawBody, "Erreur lors du chargement.");
             return;
           }
         }
         if (!response.ok) {
-          output.textContent = data.detail || "Erreur lors du chargement.";
+          output.textContent = toErrorMessage(response, data, rawBody, "Erreur lors du chargement.");
           return;
         }
         const items = data.items || [];
@@ -212,11 +262,16 @@
         const pharma = document.getElementById("rag-pharma").value;
         const files = document.getElementById("rag-files").files;
         const output = document.getElementById("rag-upload-output");
+        const errorBanner = document.getElementById("rag-upload-error");
         if (!files.length) {
           output.textContent = "Veuillez sélectionner au moins un fichier.";
+          errorBanner.classList.remove("visible");
+          errorBanner.textContent = "";
           return;
         }
         output.textContent = "Upload en cours...";
+        errorBanner.classList.remove("visible");
+        errorBanner.textContent = "";
         const formData = new FormData();
         formData.append("pharma_id", pharma);
         Array.from(files).forEach((file) => formData.append("files", file));
@@ -230,15 +285,23 @@
           try {
             data = JSON.parse(rawBody);
           } catch (error) {
-            output.textContent = rawBody || "Erreur lors de l'upload.";
+            const message = toUploadErrorMessage(response, data, rawBody, "Erreur lors de l'upload.");
+            output.textContent = message;
+            errorBanner.textContent = message;
+            errorBanner.classList.add("visible");
             return;
           }
         }
         if (!response.ok) {
-          output.textContent = data.detail || "Erreur lors de l'upload.";
+          const message = toUploadErrorMessage(response, data, rawBody, "Erreur lors de l'upload.");
+          output.textContent = message;
+          errorBanner.textContent = message;
+          errorBanner.classList.add("visible");
           return;
         }
         output.textContent = JSON.stringify(data, null, 2);
+        errorBanner.classList.remove("visible");
+        errorBanner.textContent = "";
       });
     </script>
   </body>
