@@ -9,6 +9,7 @@ from typing import Iterable
 
 from docx import Document
 from pypdf import PdfReader
+from psycopg.types.json import Json
 
 from ..db import get_connection
 from ..kpi import build_kpi_summary
